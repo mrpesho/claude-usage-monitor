@@ -1,0 +1,217 @@
+// Claude Usage Monitor - Background Service Worker
+
+const CLAUDE_BASE_URL = 'https://claude.ai';
+const DEFAULT_INTERVAL_MINUTES = 15;
+
+// Initialize alarm based on stored interval
+async function initAlarm() {
+  const { refreshInterval } = await chrome.storage.local.get(['refreshInterval']);
+  const interval = refreshInterval || DEFAULT_INTERVAL_MINUTES;
+  chrome.alarms.create('updateUsage', { periodInMinutes: interval });
+}
+
+initAlarm();
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'updateUsage') {
+    fetchUsageData();
+  }
+});
+
+// Fetch on extension load
+chrome.runtime.onStartup.addListener(() => {
+  fetchUsageData();
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  fetchUsageData();
+});
+
+// Listen for messages from popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'fetchUsage') {
+    fetchUsageData().then(sendResponse);
+    return true; // Keep channel open for async response
+  }
+  if (message.action === 'getStoredUsage') {
+    chrome.storage.local.get(['usageData', 'lastUpdated', 'error', 'refreshInterval'], sendResponse);
+    return true;
+  }
+  if (message.action === 'setRefreshInterval') {
+    const interval = message.interval;
+    chrome.storage.local.set({ refreshInterval: interval }).then(() => {
+      // Recreate alarm with new interval
+      chrome.alarms.clear('updateUsage').then(() => {
+        chrome.alarms.create('updateUsage', { periodInMinutes: interval });
+        sendResponse({ success: true });
+      });
+    });
+    return true;
+  }
+});
+
+async function fetchUsageData() {
+  try {
+    // First, we need to get the organization ID from the bootstrap data
+    const bootstrapData = await fetchBootstrapData();
+
+    if (!bootstrapData || !bootstrapData.account) {
+      throw new Error('Not logged in to Claude');
+    }
+
+    const orgId = bootstrapData.account.memberships?.[0]?.organization?.uuid;
+    if (!orgId) {
+      throw new Error('Could not find organization ID');
+    }
+
+    // Fetch usage data from the API
+    const usageData = await fetchOrganizationUsage(orgId);
+
+    // Store the data
+    const dataToStore = {
+      usageData: usageData,
+      lastUpdated: Date.now(),
+      error: null
+    };
+
+    await chrome.storage.local.set(dataToStore);
+
+    // Update badge
+    updateBadge(usageData);
+
+    return dataToStore;
+  } catch (error) {
+    console.error('Error fetching usage data:', error);
+
+    const errorData = {
+      usageData: null,
+      lastUpdated: Date.now(),
+      error: error.message
+    };
+
+    await chrome.storage.local.set(errorData);
+    updateBadgeError(error.message);
+
+    return errorData;
+  }
+}
+
+async function fetchBootstrapData() {
+  const response = await fetch(`${CLAUDE_BASE_URL}/api/bootstrap`, {
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('Not logged in');
+    }
+    throw new Error(`Bootstrap failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function fetchOrganizationUsage(orgId) {
+  const response = await fetch(`${CLAUDE_BASE_URL}/api/organizations/${orgId}/usage`, {
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Usage fetch failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// Badge cycling configuration
+const BADGE_SOURCES = [
+  { key: 'five_hour', label: '5h', color: '#D97706' },      // Orange - immediate
+  { key: 'seven_day', label: '7d', color: '#3B82F6' },      // Blue - overall
+  { key: 'seven_day_sonnet', label: 'So', color: '#8B5CF6' }, // Purple - Sonnet
+  { key: 'seven_day_opus', label: 'Op', color: '#EC4899' }    // Pink - Opus
+];
+const CYCLE_INTERVAL_MS = 4000;
+let currentBadgeIndex = 0;
+let cycleIntervalId = null;
+
+function startBadgeCycle() {
+  if (cycleIntervalId) return; // Already running
+
+  cycleIntervalId = setInterval(() => {
+    chrome.storage.local.get(['usageData'], (result) => {
+      if (result.usageData) {
+        displayNextBadge(result.usageData);
+      }
+    });
+  }, CYCLE_INTERVAL_MS);
+}
+
+function displayNextBadge(usageData) {
+  // Find next available source
+  const startIndex = currentBadgeIndex;
+  do {
+    currentBadgeIndex = (currentBadgeIndex + 1) % BADGE_SOURCES.length;
+    const source = BADGE_SOURCES[currentBadgeIndex];
+    if (usageData[source.key]?.utilization !== undefined) {
+      displayBadgeForSource(usageData, source);
+      return;
+    }
+  } while (currentBadgeIndex !== startIndex);
+}
+
+function displayBadgeForSource(usageData, source) {
+  const data = usageData[source.key];
+  if (!data || data.utilization === undefined) return;
+
+  const percentage = data.utilization;
+  const displayText = percentage > 99 ? '99' : `${percentage}`;
+
+  chrome.action.setBadgeText({ text: displayText });
+
+  // Use source color, but override to red if critical (>90%)
+  let color = source.color;
+  if (percentage >= 90) {
+    color = '#dc2626'; // Red for critical
+  }
+
+  chrome.action.setBadgeBackgroundColor({ color });
+  chrome.action.setTitle({ title: `Claude Usage - ${source.label}: ${percentage}%` });
+}
+
+function updateBadge(usageData) {
+  if (!usageData) {
+    chrome.action.setBadgeText({ text: '?' });
+    chrome.action.setBadgeBackgroundColor({ color: '#888888' });
+    chrome.action.setTitle({ title: 'Claude Usage - No data' });
+    return;
+  }
+
+  // Find first available source to display initially
+  for (let i = 0; i < BADGE_SOURCES.length; i++) {
+    const source = BADGE_SOURCES[i];
+    if (usageData[source.key]?.utilization !== undefined) {
+      currentBadgeIndex = i;
+      displayBadgeForSource(usageData, source);
+      break;
+    }
+  }
+
+  // Start cycling through sources
+  startBadgeCycle();
+}
+
+function updateBadgeError(errorMessage) {
+  if (errorMessage.includes('Not logged in') || errorMessage.includes('401')) {
+    chrome.action.setBadgeText({ text: '!' });
+    chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' }); // Orange for login needed
+  } else {
+    chrome.action.setBadgeText({ text: 'X' });
+    chrome.action.setBadgeBackgroundColor({ color: '#dc2626' }); // Red for errors
+  }
+}

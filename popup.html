@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 300px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #e5e5e5;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .refresh-btn {
+      background: transparent;
+      border: 1px solid #404040;
+      color: #e5e5e5;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: #2a2a2a;
+    }
+
+    .refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #888;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #404040;
+      border-radius: 50%;
+      border-top-color: #d97706;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error {
+      background: #2d1f1f;
+      border: 1px solid #dc2626;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .error-title {
+      color: #f87171;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .error-message {
+      color: #fca5a5;
+      font-size: 12px;
+    }
+
+    .error-hint {
+      color: #888;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+
+    .error-hint a {
+      color: #d97706;
+      text-decoration: none;
+    }
+
+    .error-hint a:hover {
+      text-decoration: underline;
+    }
+
+    .usage-section {
+      background: #242424;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .usage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .usage-label {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .usage-value {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #404040;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-green { background: #10b981; }
+    .progress-orange { background: #f59e0b; }
+    .progress-red { background: #dc2626; }
+
+    .details {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #333;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .detail-label {
+      color: #888;
+    }
+
+    .detail-value {
+      color: #e5e5e5;
+    }
+
+    .footer {
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    .raw-data {
+      margin-top: 12px;
+      padding: 8px;
+      background: #1a1a1a;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 10px;
+      color: #888;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .toggle-raw {
+      background: transparent;
+      border: none;
+      color: #666;
+      font-size: 11px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .toggle-raw:hover {
+      color: #888;
+    }
+
+    .settings {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #333;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .setting-label {
+      color: #888;
+    }
+
+    .setting-select {
+      background: #2a2a2a;
+      border: 1px solid #404040;
+      color: #e5e5e5;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .setting-select:hover {
+      border-color: #555;
+    }
+
+    .disclaimer {
+      background: #2d2510;
+      border: 1px solid #d97706;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .disclaimer-title {
+      color: #fbbf24;
+      font-weight: 600;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .disclaimer-text {
+      color: #d4d4d4;
+      font-size: 11px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .disclaimer-btn {
+      background: #d97706;
+      border: none;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    .disclaimer-btn:hover {
+      background: #b45309;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="title">Claude Usage</span>
+    <button class="refresh-btn" id="refreshBtn">Refresh</button>
+  </div>
+
+  <div id="content">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p style="margin-top: 8px;">Loading...</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
