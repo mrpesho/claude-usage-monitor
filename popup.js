@@ -106,6 +106,8 @@ function renderError(message) {
 
   if (message.includes('Not logged in') || message.includes('401') || message.includes('403')) {
     hint = `<div class="error-hint">Please <a href="https://claude.ai" target="_blank">log in to Claude</a> first.</div>`;
+  } else if (message.includes('429') || message.includes('Rate limited')) {
+    hint = `<div class="error-hint">Claude is rate limiting requests. Check <a href="https://status.claude.com" target="_blank">status.claude.com</a> for outages. Will retry automatically.</div>`;
   } else if (message.includes('fetch')) {
     hint = `<div class="error-hint">Check your internet connection and try again.</div>`;
   }
@@ -206,17 +208,23 @@ function parseUsageData(data) {
 
   // Colors match the badge cycling colors in background.js
   const windowConfig = {
-    'five_hour': { label: '5-Hour Limit', color: '#D97706' },      // Orange
-    'seven_day': { label: '7-Day Overall', color: '#3B82F6' },     // Blue
-    'seven_day_sonnet': { label: '7-Day Sonnet', color: '#8B5CF6' }, // Purple
-    'seven_day_opus': { label: '7-Day Opus', color: '#EC4899' }      // Pink
+    'five_hour': { label: '5-Hour Limit', color: '#D97706' },           // Orange
+    'seven_day': { label: '7-Day Overall', color: '#3B82F6' },          // Blue
+    'seven_day_sonnet': { label: '7-Day Sonnet', color: '#8B5CF6' },    // Purple
+    'seven_day_opus': { label: '7-Day Opus', color: '#EC4899' },        // Pink
+    'seven_day_oauth_apps': { label: '7-Day OAuth Apps', color: '#06B6D4' }, // Cyan
+    'seven_day_cowork': { label: '7-Day Cowork', color: '#10B981' },    // Green
+    'iguana_necktie': { label: 'Other', color: '#78716C' }              // Gray
   };
 
-  const windowOrder = ['five_hour', 'seven_day', 'seven_day_sonnet', 'seven_day_opus'];
+  const windowOrder = [
+    'five_hour', 'seven_day', 'seven_day_sonnet', 'seven_day_opus',
+    'seven_day_oauth_apps', 'seven_day_cowork', 'iguana_necktie'
+  ];
 
   for (const key of windowOrder) {
     const window = data[key];
-    if (window && window.utilization !== undefined) {
+    if (window && window.utilization != null) {
       const config = windowConfig[key];
       sections.push({
         label: config.label,
@@ -227,10 +235,48 @@ function parseUsageData(data) {
     }
   }
 
+  // Extra usage has a different structure
+  const extraUsage = data.extra_usage;
+  if (extraUsage) {
+    if (extraUsage.is_enabled) {
+      sections.push({
+        label: 'Extra Usage',
+        color: '#F97316',
+        percentage: extraUsage.utilization,
+        resetDate: null,
+        details: {
+          'Monthly Limit': extraUsage.monthly_limit != null ? `$${extraUsage.monthly_limit}` : 'N/A',
+          'Used': extraUsage.used_credits != null ? `$${extraUsage.used_credits}` : '$0'
+        }
+      });
+    } else {
+      sections.push({
+        label: 'Extra Usage',
+        color: '#78716C',
+        disabled: true
+      });
+    }
+  }
+
   return { sections };
 }
 
 function renderUsageSection(section) {
+  if (section.disabled) {
+    return `
+      <div class="usage-section disabled-section">
+        <div class="usage-header">
+          <span class="usage-label">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${section.color || '#888'};margin-right:6px;"></span>
+            ${escapeHtml(section.label)}
+          </span>
+          <span class="usage-value" style="color:#666;">Disabled</span>
+        </div>
+        <div class="disabled-hint">Enable extra usage in your Claude account settings</div>
+      </div>
+    `;
+  }
+
   let percentage;
 
   if (section.percentage !== undefined) {

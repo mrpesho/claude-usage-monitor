@@ -52,14 +52,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function fetchUsageData() {
   try {
-    // First, we need to get the organization ID from the bootstrap data
-    const bootstrapData = await fetchBootstrapData();
+    // Get the organization ID from the organizations endpoint
+    const orgs = await fetchOrganizations();
 
-    if (!bootstrapData || !bootstrapData.account) {
+    if (!orgs || !Array.isArray(orgs) || orgs.length === 0) {
       throw new Error('Not logged in to Claude');
     }
 
-    const orgId = bootstrapData.account.memberships?.[0]?.organization?.uuid;
+    // Find the org with chat capability (the main Claude account, not API-only)
+    const chatOrg = orgs.find(o => o.capabilities?.includes('chat'));
+    const orgId = chatOrg?.uuid || orgs[0].uuid;
     if (!orgId) {
       throw new Error('Could not find organization ID');
     }
@@ -96,8 +98,25 @@ async function fetchUsageData() {
   }
 }
 
-async function fetchBootstrapData() {
-  const response = await fetch(`${CLAUDE_BASE_URL}/api/bootstrap`, {
+async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+
+    if (response.status === 429 && attempt < maxRetries) {
+      const retryAfter = response.headers.get('retry-after');
+      const delay = retryAfter
+        ? parseInt(retryAfter, 10) * 1000
+        : Math.min(1000 * Math.pow(2, attempt), 10000); // 1s, 2s, 4s (max 10s)
+      await new Promise(r => setTimeout(r, delay));
+      continue;
+    }
+
+    return response;
+  }
+}
+
+async function fetchOrganizations() {
+  const response = await fetchWithRetry(`${CLAUDE_BASE_URL}/api/organizations/`, {
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
@@ -108,14 +127,17 @@ async function fetchBootstrapData() {
     if (response.status === 401 || response.status === 403) {
       throw new Error('Not logged in');
     }
-    throw new Error(`Bootstrap failed: ${response.status}`);
+    if (response.status === 429) {
+      throw new Error('Rate limited by Claude (429). Service may be experiencing issues.');
+    }
+    throw new Error(`Failed to fetch organizations: ${response.status}`);
   }
 
   return response.json();
 }
 
 async function fetchOrganizationUsage(orgId) {
-  const response = await fetch(`${CLAUDE_BASE_URL}/api/organizations/${orgId}/usage`, {
+  const response = await fetchWithRetry(`${CLAUDE_BASE_URL}/api/organizations/${orgId}/usage`, {
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
@@ -123,6 +145,9 @@ async function fetchOrganizationUsage(orgId) {
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('Rate limited by Claude (429). Service may be experiencing issues.');
+    }
     throw new Error(`Usage fetch failed: ${response.status}`);
   }
 
@@ -131,10 +156,14 @@ async function fetchOrganizationUsage(orgId) {
 
 // Badge cycling configuration
 const BADGE_SOURCES = [
-  { key: 'five_hour', label: '5h', color: '#D97706' },      // Orange - immediate
-  { key: 'seven_day', label: '7d', color: '#3B82F6' },      // Blue - overall
-  { key: 'seven_day_sonnet', label: 'So', color: '#8B5CF6' }, // Purple - Sonnet
-  { key: 'seven_day_opus', label: 'Op', color: '#EC4899' }    // Pink - Opus
+  { key: 'five_hour', label: '5h', color: '#D97706' },           // Orange - immediate
+  { key: 'seven_day', label: '7d', color: '#3B82F6' },           // Blue - overall
+  { key: 'seven_day_sonnet', label: 'So', color: '#8B5CF6' },    // Purple - Sonnet
+  { key: 'seven_day_opus', label: 'Op', color: '#EC4899' },      // Pink - Opus
+  { key: 'seven_day_oauth_apps', label: 'OA', color: '#06B6D4' }, // Cyan - OAuth Apps
+  { key: 'seven_day_cowork', label: 'Cw', color: '#10B981' },    // Green - Cowork
+  { key: 'iguana_necktie', label: 'Ot', color: '#78716C' },      // Gray - Other
+  { key: 'extra_usage', label: 'Ex', color: '#F97316' }          // Orange - Extra
 ];
 const CYCLE_INTERVAL_MS = 4000;
 let currentBadgeIndex = 0;
@@ -158,7 +187,7 @@ function displayNextBadge(usageData) {
   do {
     currentBadgeIndex = (currentBadgeIndex + 1) % BADGE_SOURCES.length;
     const source = BADGE_SOURCES[currentBadgeIndex];
-    if (usageData[source.key]?.utilization !== undefined) {
+    if (usageData[source.key]?.utilization != null) {
       displayBadgeForSource(usageData, source);
       return;
     }
@@ -167,7 +196,7 @@ function displayNextBadge(usageData) {
 
 function displayBadgeForSource(usageData, source) {
   const data = usageData[source.key];
-  if (!data || data.utilization === undefined) return;
+  if (!data || data.utilization == null) return;
 
   const percentage = data.utilization;
   const displayText = percentage > 99 ? '99' : `${percentage}`;
@@ -195,7 +224,7 @@ function updateBadge(usageData) {
   // Find first available source to display initially
   for (let i = 0; i < BADGE_SOURCES.length; i++) {
     const source = BADGE_SOURCES[i];
-    if (usageData[source.key]?.utilization !== undefined) {
+    if (usageData[source.key]?.utilization != null) {
       currentBadgeIndex = i;
       displayBadgeForSource(usageData, source);
       break;
