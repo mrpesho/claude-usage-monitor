@@ -6,11 +6,13 @@ const refreshBtn = document.getElementById('refreshBtn');
 let showRawData = false;
 let currentData = null;
 let currentRefreshInterval = 15;
+let collapsedCards = {};
 
 // Load stored data on popup open
 document.addEventListener('DOMContentLoaded', async () => {
-  const { disclaimerAccepted } = await chrome.storage.local.get('disclaimerAccepted');
-  if (!disclaimerAccepted) {
+  const stored = await chrome.storage.local.get(['disclaimerAccepted', 'collapsedCards']);
+  collapsedCards = stored.collapsedCards || {};
+  if (!stored.disclaimerAccepted) {
     showDisclaimer();
   } else {
     loadStoredData();
@@ -185,6 +187,19 @@ function renderUsage(usageData, lastUpdated) {
     await chrome.runtime.sendMessage({ action: 'setRefreshInterval', interval: newInterval });
   });
 
+  // Set up card collapse toggles
+  document.querySelectorAll('.usage-section[data-key] .usage-header').forEach(header => {
+    header.addEventListener('click', async () => {
+      const card = header.closest('.usage-section');
+      const key = card.dataset.key;
+      const isNowCollapsed = card.classList.contains('expanded');
+      card.classList.toggle('expanded', !isNowCollapsed);
+      card.classList.toggle('collapsed', isNowCollapsed);
+      collapsedCards[key] = isNowCollapsed;
+      await chrome.storage.local.set({ collapsedCards });
+    });
+  });
+
   // Set up raw data toggle
   const toggleBtn = document.getElementById('toggleRaw');
   const rawDataEl = document.getElementById('rawData');
@@ -227,6 +242,7 @@ function parseUsageData(data) {
     if (window && window.utilization != null) {
       const config = windowConfig[key];
       sections.push({
+        key: key,
         label: config.label,
         color: config.color,
         percentage: window.utilization,
@@ -240,17 +256,19 @@ function parseUsageData(data) {
   if (extraUsage) {
     if (extraUsage.is_enabled) {
       sections.push({
+        key: 'extra_usage',
         label: 'Extra Usage',
-        color: '#F97316',
-        percentage: extraUsage.utilization,
+        color: '#E11D48',
+        percentage: extraUsage.monthly_limit ? (extraUsage.used_credits / extraUsage.monthly_limit) * 100 : extraUsage.utilization,
         resetDate: null,
         details: {
-          'Monthly Limit': extraUsage.monthly_limit != null ? `$${extraUsage.monthly_limit}` : 'N/A',
-          'Used': extraUsage.used_credits != null ? `$${extraUsage.used_credits}` : '$0'
+          'Monthly Limit': extraUsage.monthly_limit != null ? `$${(extraUsage.monthly_limit / 100).toFixed(2)}` : 'N/A',
+          'Used': extraUsage.used_credits != null ? `$${(extraUsage.used_credits / 100).toFixed(2)}` : '$0'
         }
       });
     } else {
       sections.push({
+        key: 'extra_usage',
         label: 'Extra Usage',
         color: '#78716C',
         disabled: true
@@ -262,17 +280,23 @@ function parseUsageData(data) {
 }
 
 function renderUsageSection(section) {
+  const isCollapsed = collapsedCards[section.key] === true;
+  const stateClass = isCollapsed ? 'collapsed' : 'expanded';
+
   if (section.disabled) {
     return `
-      <div class="usage-section disabled-section">
+      <div class="usage-section ${stateClass} disabled-section" data-key="${section.key}">
         <div class="usage-header">
           <span class="usage-label">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${section.color || '#888'};margin-right:6px;"></span>
             ${escapeHtml(section.label)}
+            <span class="toggle-arrow">▾</span>
           </span>
           <span class="usage-value" style="color:#666;">Disabled</span>
         </div>
-        <div class="disabled-hint">Enable extra usage in your Claude account settings</div>
+        <div class="usage-body">
+          <div class="disabled-hint">Enable extra usage in your Claude account settings</div>
+        </div>
       </div>
     `;
   }
@@ -301,16 +325,17 @@ function renderUsageSection(section) {
     valueDisplay = `${percentage.toFixed(1)}%`;
   }
 
-  // Add colored dot next to label for easy identification
   let html = `
-    <div class="usage-section">
+    <div class="usage-section ${stateClass}" data-key="${section.key}">
       <div class="usage-header">
         <span class="usage-label">
           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${section.color || '#888'};margin-right:6px;"></span>
           ${escapeHtml(section.label)}
+          <span class="toggle-arrow">▾</span>
         </span>
         <span class="usage-value">${valueDisplay}</span>
       </div>
+      <div class="usage-body">
   `;
 
   if (percentage !== null) {
@@ -345,7 +370,7 @@ function renderUsageSection(section) {
     html += '</div>';
   }
 
-  html += '</div>';
+  html += '</div></div>';
   return html;
 }
 

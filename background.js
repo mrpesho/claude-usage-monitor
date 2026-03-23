@@ -161,7 +161,7 @@ const BADGE_SOURCES = [
   { key: 'seven_day_oauth_apps', label: 'OA', color: '#06B6D4' }, // Cyan - OAuth Apps
   { key: 'seven_day_cowork', label: 'Cw', color: '#10B981' },    // Green - Cowork
   { key: 'iguana_necktie', label: 'Ot', color: '#78716C' },      // Gray - Other
-  { key: 'extra_usage', label: 'Ex', color: '#F97316' }          // Orange - Extra
+  { key: 'extra_usage', label: 'Ex', color: '#E11D48' }          // Rose - Extra
 ];
 const CYCLE_INTERVAL_MS = 4000;
 let currentBadgeIndex = 0;
@@ -179,13 +179,24 @@ function startBadgeCycle() {
   }, CYCLE_INTERVAL_MS);
 }
 
+function getUtilization(usageData, key) {
+  const data = usageData[key];
+  if (!data) return null;
+  if (data.utilization != null) return data.utilization;
+  // Extra usage: compute from used_credits / monthly_limit
+  if (key === 'extra_usage' && data.is_enabled && data.monthly_limit) {
+    return Math.round((data.used_credits / data.monthly_limit) * 100);
+  }
+  return null;
+}
+
 function displayNextBadge(usageData) {
   // Find next available source
   const startIndex = currentBadgeIndex;
   do {
     currentBadgeIndex = (currentBadgeIndex + 1) % BADGE_SOURCES.length;
     const source = BADGE_SOURCES[currentBadgeIndex];
-    if (usageData[source.key]?.utilization != null) {
+    if (getUtilization(usageData, source.key) != null) {
       displayBadgeForSource(usageData, source);
       return;
     }
@@ -193,10 +204,8 @@ function displayNextBadge(usageData) {
 }
 
 function displayBadgeForSource(usageData, source) {
-  const data = usageData[source.key];
-  if (!data || data.utilization == null) return;
-
-  const percentage = data.utilization;
+  const percentage = getUtilization(usageData, source.key);
+  if (percentage == null) return;
   const displayText = percentage > 99 ? '99' : `${percentage}`;
 
   chrome.action.setBadgeText({ text: displayText });
@@ -222,7 +231,7 @@ function updateBadge(usageData) {
   // Find first available source to display initially
   for (let i = 0; i < BADGE_SOURCES.length; i++) {
     const source = BADGE_SOURCES[i];
-    if (usageData[source.key]?.utilization != null) {
+    if (getUtilization(usageData, source.key) != null) {
       currentBadgeIndex = i;
       displayBadgeForSource(usageData, source);
       break;

@@ -116,7 +116,43 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .usage-header:hover {
+      opacity: 0.85;
+    }
+
+    .usage-section.expanded .usage-header {
       margin-bottom: 8px;
+    }
+
+    .toggle-arrow {
+      font-size: 14px;
+      color: #888;
+      margin-left: 6px;
+      transition: transform 0.2s ease;
+      display: inline-block;
+    }
+
+    .usage-section.collapsed .toggle-arrow {
+      transform: rotate(-90deg);
+    }
+
+    .usage-body {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.2s ease;
+    }
+
+    .usage-section.collapsed .usage-body {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .usage-section.expanded .usage-body {
+      max-height: 200px;
+      opacity: 1;
     }
 
     .usage-label {
