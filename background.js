@@ -52,16 +52,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function fetchUsageData() {
   try {
-    // Get the organization ID from the organizations endpoint
-    const orgs = await fetchOrganizations();
+    // Get the organization ID from the bootstrap data
+    const bootstrapData = await fetchBootstrapData();
 
-    if (!orgs || !Array.isArray(orgs) || orgs.length === 0) {
+    if (!bootstrapData || !bootstrapData.account) {
       throw new Error('Not logged in to Claude');
     }
 
-    // Find the org with chat capability (the main Claude account, not API-only)
-    const chatOrg = orgs.find(o => o.capabilities?.includes('chat'));
-    const orgId = chatOrg?.uuid || orgs[0].uuid;
+    const orgId = bootstrapData.account.memberships?.[0]?.organization?.uuid;
     if (!orgId) {
       throw new Error('Could not find organization ID');
     }
@@ -115,8 +113,8 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3) {
   }
 }
 
-async function fetchOrganizations() {
-  const response = await fetchWithRetry(`${CLAUDE_BASE_URL}/api/organizations/`, {
+async function fetchBootstrapData() {
+  const response = await fetchWithRetry(`${CLAUDE_BASE_URL}/api/bootstrap`, {
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
@@ -130,7 +128,7 @@ async function fetchOrganizations() {
     if (response.status === 429) {
       throw new Error('Rate limited by Claude (429). Service may be experiencing issues.');
     }
-    throw new Error(`Failed to fetch organizations: ${response.status}`);
+    throw new Error(`Bootstrap failed: ${response.status}`);
   }
 
   return response.json();
