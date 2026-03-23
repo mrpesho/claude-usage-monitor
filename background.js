@@ -206,7 +206,7 @@ function displayNextBadge(usageData) {
 function displayBadgeForSource(usageData, source) {
   const percentage = getUtilization(usageData, source.key);
   if (percentage == null) return;
-  const displayText = percentage > 99 ? '99' : `${percentage}`;
+  const displayText = percentage > 99 ? '99' : `${Math.round(percentage)}`;
 
   chrome.action.setBadgeText({ text: displayText });
 
