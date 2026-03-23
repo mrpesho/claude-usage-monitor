@@ -19,13 +19,20 @@ Anthropic has clarified that they cannot officially endorse the use of internal 
 ## Features
 
 - Shows usage percentage directly on the extension badge
-- Cycles through different usage limits with color-coded indicators:
-  - **Orange** - 5-hour limit
-  - **Blue** - 7-day overall
-  - **Purple** - 7-day Sonnet
-  - **Pink** - 7-day Opus
+- Cycles through all available usage limits with color-coded indicators:
+  - **Orange** — 5-hour limit
+  - **Blue** — 7-day overall
+  - **Purple** — 7-day Sonnet
+  - **Pink** — 7-day Opus
+  - **Cyan** — 7-day OAuth Apps
+  - **Green** — 7-day Cowork
+  - **Gray** — Other
+  - **Rose** — Extra Usage
 - Detailed popup with progress bars and reset times
-- Configurable auto-refresh interval (5min - 1hour)
+- Collapsible cards — click any card to collapse/expand; layout persists across sessions
+- Extra Usage section showing monthly limit, amount used, and computed percentage
+- Automatic retry with exponential backoff on rate-limited (429) responses
+- Configurable auto-refresh interval (5min – 1hour)
 - Works with your existing Claude session (no API key needed)
 - All data stays local — nothing is sent to third parties
 
