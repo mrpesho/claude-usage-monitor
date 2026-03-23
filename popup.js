@@ -100,7 +100,7 @@ function renderContent(data) {
     return;
   }
 
-  renderUsage(data.usageData, data.lastUpdated);
+  renderUsage(data.usageData, data.lastUpdated, data.prepaidCredits);
 }
 
 function renderError(message) {
@@ -123,13 +123,13 @@ function renderError(message) {
   `;
 }
 
-function renderUsage(usageData, lastUpdated) {
+function renderUsage(usageData, lastUpdated, prepaidCredits) {
   let html = '';
 
   // Try to extract and display usage information
   // The API response structure may vary, so we handle multiple formats
 
-  const usageInfo = parseUsageData(usageData);
+  const usageInfo = parseUsageData(usageData, prepaidCredits);
 
   if (usageInfo.sections.length > 0) {
     for (const section of usageInfo.sections) {
@@ -212,7 +212,7 @@ function renderUsage(usageData, lastUpdated) {
   });
 }
 
-function parseUsageData(data) {
+function parseUsageData(data, prepaidCredits) {
   const sections = [];
 
   // Claude API structure:
@@ -255,16 +255,21 @@ function parseUsageData(data) {
   const extraUsage = data.extra_usage;
   if (extraUsage) {
     if (extraUsage.is_enabled) {
+      const currencySymbol = prepaidCredits?.currency === 'EUR' ? '€' : '$';
+      const details = {
+        'Monthly Limit': extraUsage.monthly_limit != null ? `${currencySymbol}${(extraUsage.monthly_limit / 100).toFixed(2)}` : 'N/A',
+        'Used': extraUsage.used_credits != null ? `${currencySymbol}${(extraUsage.used_credits / 100).toFixed(2)}` : `${currencySymbol}0`
+      };
+      if (prepaidCredits && prepaidCredits.amount != null) {
+        details['Balance'] = `${currencySymbol}${(prepaidCredits.amount / 100).toFixed(2)}`;
+      }
       sections.push({
         key: 'extra_usage',
         label: 'Extra Usage',
         color: '#E11D48',
         percentage: extraUsage.monthly_limit ? (extraUsage.used_credits / extraUsage.monthly_limit) * 100 : extraUsage.utilization,
         resetDate: null,
-        details: {
-          'Monthly Limit': extraUsage.monthly_limit != null ? `$${(extraUsage.monthly_limit / 100).toFixed(2)}` : 'N/A',
-          'Used': extraUsage.used_credits != null ? `$${(extraUsage.used_credits / 100).toFixed(2)}` : '$0'
-        }
+        details: details
       });
     } else {
       sections.push({

@@ -34,7 +34,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep channel open for async response
   }
   if (message.action === 'getStoredUsage') {
-    chrome.storage.local.get(['usageData', 'lastUpdated', 'error', 'refreshInterval'], sendResponse);
+    chrome.storage.local.get(['usageData', 'prepaidCredits', 'lastUpdated', 'error', 'refreshInterval'], sendResponse);
     return true;
   }
   if (message.action === 'setRefreshInterval') {
@@ -64,12 +64,16 @@ async function fetchUsageData() {
       throw new Error('Could not find organization ID');
     }
 
-    // Fetch usage data from the API
-    const usageData = await fetchOrganizationUsage(orgId);
+    // Fetch usage data and prepaid credits in parallel
+    const [usageData, prepaidCredits] = await Promise.all([
+      fetchOrganizationUsage(orgId),
+      fetchPrepaidCredits(orgId).catch(() => null)
+    ]);
 
     // Store the data
     const dataToStore = {
       usageData: usageData,
+      prepaidCredits: prepaidCredits,
       lastUpdated: Date.now(),
       error: null
     };
@@ -147,6 +151,21 @@ async function fetchOrganizationUsage(orgId) {
       throw new Error('Rate limited by Claude (429). Service may be experiencing issues.');
     }
     throw new Error(`Usage fetch failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function fetchPrepaidCredits(orgId) {
+  const response = await fetchWithRetry(`${CLAUDE_BASE_URL}/api/organizations/${orgId}/prepaid/credits`, {
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+    }
+  });
+
+  if (!response.ok) {
+    return null;
   }
 
   return response.json();
