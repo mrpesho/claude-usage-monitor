@@ -4,7 +4,7 @@
 
 A Chrome extension that displays your Claude AI usage status in the browser toolbar.
 
-<img src="screenshot.gif" width="300" alt="Claude Usage Monitor Screenshot">
+<img src="preview.gif" width="300" alt="Claude Usage Monitor Preview">
 
 ## Important Notice
 
