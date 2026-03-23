@@ -174,7 +174,14 @@ function renderUsage(usageData, lastUpdated, prepaidCredits) {
   // Raw data toggle
   html += `
     <button class="toggle-raw" id="toggleRaw">Show raw data</button>
-    <div class="raw-data" id="rawData" style="display: none;"></div>
+    <div id="rawDataContainer" style="display: none;">
+      <div class="raw-data-label">Usage</div>
+      <div class="raw-data" id="rawDataUsage"></div>
+      ${prepaidCredits ? `
+        <div class="raw-data-label">Prepaid Credits</div>
+        <div class="raw-data" id="rawDataPrepaid"></div>
+      ` : ''}
+    </div>
   `;
 
   contentEl.innerHTML = html;
@@ -202,13 +209,17 @@ function renderUsage(usageData, lastUpdated, prepaidCredits) {
 
   // Set up raw data toggle
   const toggleBtn = document.getElementById('toggleRaw');
-  const rawDataEl = document.getElementById('rawData');
+  const rawContainer = document.getElementById('rawDataContainer');
 
   toggleBtn.addEventListener('click', () => {
     showRawData = !showRawData;
-    rawDataEl.style.display = showRawData ? 'block' : 'none';
+    rawContainer.style.display = showRawData ? 'block' : 'none';
     toggleBtn.textContent = showRawData ? 'Hide raw data' : 'Show raw data';
-    rawDataEl.textContent = JSON.stringify(usageData, null, 2);
+    document.getElementById('rawDataUsage').textContent = JSON.stringify(usageData, null, 2);
+    const prepaidEl = document.getElementById('rawDataPrepaid');
+    if (prepaidEl) {
+      prepaidEl.textContent = JSON.stringify(prepaidCredits, null, 2);
+    }
   });
 }
 
