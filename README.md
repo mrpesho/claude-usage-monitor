@@ -85,7 +85,7 @@ The extension fetches usage data from Claude's internal API endpoints using your
 2. `/api/organizations/{orgId}/usage` — Fetches your current usage data
 3. `/api/organizations/{orgId}/prepaid/credits` — Fetches your current prepaid balance
 
-**Privacy:** The extension does not store or transmit your credentials anywhere. All data is kept locally in your browser's extension storage.
+**Privacy:** The extension does not extract or store your login credentials. It relies on your existing browser session to fetch data from claude.ai. Usage data is cached locally in your browser's extension storage and is never transmitted to third parties.
 
 ## Updating
 
