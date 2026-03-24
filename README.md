@@ -44,7 +44,7 @@ Since this is an unofficial extension, it's distributed via GitHub and must be i
 
 **Option A: Download from Releases (Recommended)**
 1. Go to the [Releases](../../releases) page
-2. Download the latest `claude-usage-monitor-vX.X.X.zip`
+2. Download the latest `claude-usage-monitor.zip`
 3. Extract the ZIP to a folder on your computer
 
 **Option B: Clone with Git**
@@ -83,6 +83,7 @@ The extension fetches usage data from Claude's internal API endpoints using your
 
 1. `/api/bootstrap` — Gets your organization ID from your logged-in session
 2. `/api/organizations/{orgId}/usage` — Fetches your current usage data
+3. `/api/organizations/{orgId}/prepaid/credits` — Fetches your current prepaid balance
 
 **Privacy:** The extension does not store or transmit your credentials anywhere. All data is kept locally in your browser's extension storage.
 
