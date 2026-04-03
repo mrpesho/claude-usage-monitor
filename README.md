@@ -34,7 +34,7 @@ Anthropic has clarified that they cannot officially endorse the use of internal 
 - Automatic retry with exponential backoff on rate-limited (429) responses
 - Configurable auto-refresh interval (5min – 1hour)
 - Works with your existing Claude session (no API key needed)
-- All data stays local — nothing is sent to third parties
+- All data stays local — nothing ever leaves your browser
 
 ## Installation
 
@@ -85,7 +85,7 @@ The extension fetches usage data from Claude's internal API endpoints using your
 2. `/api/organizations/{orgId}/usage` — Fetches your current usage data
 3. `/api/organizations/{orgId}/prepaid/credits` — Fetches your current prepaid balance
 
-**Privacy:** The extension does not extract or store your login credentials. It relies on your existing browser session to fetch data from claude.ai. Usage data is cached locally in your browser's extension storage and is never transmitted to third parties.
+**Privacy:** The extension does not extract or store your login credentials. It relies on your existing browser session to fetch data from claude.ai. Usage data is cached locally in your browser's extension storage and never leaves your browser.
 
 ## Updating
 

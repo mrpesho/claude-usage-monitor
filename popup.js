@@ -5,7 +5,7 @@ const refreshBtn = document.getElementById('refreshBtn');
 
 let showRawData = false;
 let currentData = null;
-let currentRefreshInterval = 15;
+let currentRefreshInterval = 5;
 let collapsedCards = {};
 
 // Load stored data on popup open
@@ -29,7 +29,7 @@ function showDisclaimer() {
         <br><br>
         It may <strong>stop working at any time</strong> if Anthropic changes their internal endpoints.
         <br><br>
-        Your data stays local and is never sent to third parties.
+        Your data stays local and never leaves your browser.
       </div>
       <button class="disclaimer-btn" id="acceptDisclaimer">I Understand</button>
     </div>
@@ -161,11 +161,11 @@ function renderUsage(usageData, lastUpdated, prepaidCredits) {
       <div class="setting-row">
         <span class="setting-label">Auto-refresh</span>
         <select class="setting-select" id="refreshInterval">
+          <option value="2" ${currentRefreshInterval === 2 ? 'selected' : ''}>2 min</option>
           <option value="5" ${currentRefreshInterval === 5 ? 'selected' : ''}>5 min</option>
           <option value="10" ${currentRefreshInterval === 10 ? 'selected' : ''}>10 min</option>
           <option value="15" ${currentRefreshInterval === 15 ? 'selected' : ''}>15 min</option>
           <option value="30" ${currentRefreshInterval === 30 ? 'selected' : ''}>30 min</option>
-          <option value="60" ${currentRefreshInterval === 60 ? 'selected' : ''}>1 hour</option>
         </select>
       </div>
     </div>

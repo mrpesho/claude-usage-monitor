@@ -1,7 +1,7 @@
 // Claude Usage Monitor - Background Service Worker
 
 const CLAUDE_BASE_URL = 'https://claude.ai';
-const DEFAULT_INTERVAL_MINUTES = 15;
+const DEFAULT_INTERVAL_MINUTES = 5;
 
 // Initialize alarm based on stored interval
 async function initAlarm() {
@@ -225,18 +225,13 @@ function displayNextBadge(usageData) {
 function displayBadgeForSource(usageData, source) {
   const percentage = getUtilization(usageData, source.key);
   if (percentage == null) return;
-  const displayText = percentage > 99 ? '99' : `${Math.round(percentage)}`;
+  const rounded = Math.round(percentage);
+  const displayText = rounded >= 100 ? 'L' : `${rounded}`;
 
   chrome.action.setBadgeText({ text: displayText });
 
-  // Use source color, but override to red if critical (>90%)
-  let color = source.color;
-  if (percentage >= 90) {
-    color = '#dc2626'; // Red for critical
-  }
-
-  chrome.action.setBadgeBackgroundColor({ color });
-  chrome.action.setTitle({ title: `Claude Usage - ${source.label}: ${percentage}%` });
+  chrome.action.setBadgeBackgroundColor({ color: source.color });
+  chrome.action.setTitle({ title: `Claude Usage - ${source.label}: ${rounded}%` });
 }
 
 function updateBadge(usageData) {
