@@ -266,13 +266,19 @@ function parseUsageData(data, prepaidCredits) {
   const extraUsage = data.extra_usage;
   if (extraUsage) {
     if (extraUsage.is_enabled) {
-      const currencySymbol = prepaidCredits?.currency === 'EUR' ? '€' : '$';
+      const currencyMap = {
+        USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'C$', AUD: 'A$',
+        CHF: 'CHF', CNY: '¥', INR: '₹', RUB: '₽', SEK: 'kr', MXN: 'Mex$', SGD: 'S$'
+      };
+      const cur = prepaidCredits?.currency;
+      const currencySymbol = currencyMap[cur] || cur || '$';
+      const fmt = (val) => `${currencySymbol} ${(val / 100).toFixed(2)}`;
       const details = {
-        'Monthly Limit': extraUsage.monthly_limit != null ? `${currencySymbol}${(extraUsage.monthly_limit / 100).toFixed(2)}` : 'N/A',
-        'Used': extraUsage.used_credits != null ? `${currencySymbol}${(extraUsage.used_credits / 100).toFixed(2)}` : `${currencySymbol}0`
+        'Monthly Limit': extraUsage.monthly_limit != null ? fmt(extraUsage.monthly_limit) : 'N/A',
+        'Used': extraUsage.used_credits != null ? fmt(extraUsage.used_credits) : fmt(0)
       };
       if (prepaidCredits && prepaidCredits.amount != null) {
-        details['Balance'] = `${currencySymbol}${(prepaidCredits.amount / 100).toFixed(2)}`;
+        details['Balance'] = fmt(prepaidCredits.amount);
       }
       sections.push({
         key: 'extra_usage',
