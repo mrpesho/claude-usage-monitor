@@ -19,6 +19,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// Re-render when background worker updates storage
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && (changes.usageData || changes.prepaidCredits || changes.error)) {
+    loadStoredData();
+  }
+});
+
 function showDisclaimer() {
   refreshBtn.style.display = 'none';
   contentEl.innerHTML = `
