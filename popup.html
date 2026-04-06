@@ -325,6 +325,24 @@
     .disclaimer-btn:hover {
       background: #b45309;
     }
+
+    .badge-toggle {
+      opacity: 0;
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 4px;
+      transition: opacity 0.15s;
+      vertical-align: middle;
+    }
+
+    .usage-section:hover .badge-toggle.on {
+      opacity: 1;
+    }
+
+    .badge-toggle.off {
+      opacity: 1;
+      color: #555;
+    }
   </style>
 </head>
 <body>

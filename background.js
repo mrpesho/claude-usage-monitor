@@ -190,9 +190,9 @@ function startBadgeCycle() {
   if (cycleIntervalId) return; // Already running
 
   cycleIntervalId = setInterval(() => {
-    chrome.storage.local.get(['usageData'], (result) => {
+    chrome.storage.local.get(['usageData', 'badgeVisibility'], (result) => {
       if (result.usageData) {
-        displayNextBadge(result.usageData);
+        displayNextBadge(result.usageData, result.badgeVisibility || {});
       }
     });
   }, CYCLE_INTERVAL_MS);
@@ -209,17 +209,23 @@ function getUtilization(usageData, key) {
   return null;
 }
 
-function displayNextBadge(usageData) {
+function displayNextBadge(usageData, badgeVisibility) {
   // Find next available source
   const startIndex = currentBadgeIndex;
   do {
     currentBadgeIndex = (currentBadgeIndex + 1) % BADGE_SOURCES.length;
     const source = BADGE_SOURCES[currentBadgeIndex];
+    if (badgeVisibility[source.key] === false) continue;
     if (getUtilization(usageData, source.key) != null) {
       displayBadgeForSource(usageData, source);
       return;
     }
   } while (currentBadgeIndex !== startIndex);
+
+  // All sources hidden or unavailable
+  chrome.action.setBadgeText({ text: '-' });
+  chrome.action.setBadgeBackgroundColor({ color: '#888888' });
+  chrome.action.setTitle({ title: 'Claude Usage - All sources hidden' });
 }
 
 function displayBadgeForSource(usageData, source) {
@@ -234,7 +240,7 @@ function displayBadgeForSource(usageData, source) {
   chrome.action.setTitle({ title: `Claude Usage - ${source.label}: ${rounded}%` });
 }
 
-function updateBadge(usageData) {
+async function updateBadge(usageData) {
   if (!usageData) {
     chrome.action.setBadgeText({ text: '?' });
     chrome.action.setBadgeBackgroundColor({ color: '#888888' });
@@ -242,14 +248,26 @@ function updateBadge(usageData) {
     return;
   }
 
-  // Find first available source to display initially
+  const { badgeVisibility } = await chrome.storage.local.get(['badgeVisibility']);
+  const visibility = badgeVisibility || {};
+
+  // Find first available and visible source to display initially
+  let found = false;
   for (let i = 0; i < BADGE_SOURCES.length; i++) {
     const source = BADGE_SOURCES[i];
+    if (visibility[source.key] === false) continue;
     if (getUtilization(usageData, source.key) != null) {
       currentBadgeIndex = i;
       displayBadgeForSource(usageData, source);
+      found = true;
       break;
     }
+  }
+
+  if (!found) {
+    chrome.action.setBadgeText({ text: '-' });
+    chrome.action.setBadgeBackgroundColor({ color: '#888888' });
+    chrome.action.setTitle({ title: 'Claude Usage - All sources hidden' });
   }
 
   // Start cycling through sources

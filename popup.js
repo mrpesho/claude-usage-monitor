@@ -7,11 +7,13 @@ let showRawData = false;
 let currentData = null;
 let currentRefreshInterval = 5;
 let collapsedCards = {};
+let badgeVisibility = {};
 
 // Load stored data on popup open
 document.addEventListener('DOMContentLoaded', async () => {
-  const stored = await chrome.storage.local.get(['disclaimerAccepted', 'collapsedCards']);
+  const stored = await chrome.storage.local.get(['disclaimerAccepted', 'collapsedCards', 'badgeVisibility']);
   collapsedCards = stored.collapsedCards || {};
+  badgeVisibility = stored.badgeVisibility || {};
   if (!stored.disclaimerAccepted) {
     showDisclaimer();
   } else {
@@ -214,6 +216,29 @@ function renderUsage(usageData, lastUpdated, prepaidCredits) {
     });
   });
 
+  // Set up badge visibility toggles
+  document.querySelectorAll('.badge-toggle').forEach(toggle => {
+    toggle.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const key = toggle.dataset.key;
+      const color = toggle.dataset.color;
+      const isCurrentlyVisible = badgeVisibility[key] !== false;
+      badgeVisibility[key] = !isCurrentlyVisible;
+
+      if (badgeVisibility[key]) {
+        toggle.classList.replace('off', 'on');
+        toggle.style.color = color;
+        toggle.title = 'Hide from icon badge';
+      } else {
+        toggle.classList.replace('on', 'off');
+        toggle.style.color = '';
+        toggle.title = 'Show in icon badge';
+      }
+
+      await chrome.storage.local.set({ badgeVisibility });
+    });
+  });
+
   // Set up raw data toggle
   const toggleBtn = document.getElementById('toggleRaw');
   const rawContainer = document.getElementById('rawDataContainer');
@@ -354,12 +379,18 @@ function renderUsageSection(section) {
     valueDisplay = `${percentage.toFixed(1)}%`;
   }
 
+  const isVisible = badgeVisibility[section.key] !== false;
+  const toggleClass = isVisible ? 'on' : 'off';
+  const toggleColor = isVisible ? `color:${section.color || '#888'}` : '';
+  const toggleTitle = isVisible ? 'Hide from icon badge' : 'Show in icon badge';
+
   let html = `
     <div class="usage-section ${stateClass}" data-key="${section.key}">
       <div class="usage-header">
         <span class="usage-label">
           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${section.color || '#888'};margin-right:6px;"></span>
           ${escapeHtml(section.label)}
+          <span class="badge-toggle ${toggleClass}" data-key="${section.key}" data-color="${section.color || '#888'}" title="${toggleTitle}" style="${toggleColor}">&#x21BB;</span>
           <span class="toggle-arrow">▾</span>
         </span>
         <span class="usage-value">${valueDisplay}</span>
