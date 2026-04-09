@@ -34,7 +34,7 @@ function showDisclaimer() {
     <div class="disclaimer">
       <div class="disclaimer-title">Unofficial Extension</div>
       <div class="disclaimer-text">
-        This extension uses <strong>undocumented internal APIs</strong> from claude.ai that are not officially supported by Anthropic.
+        This extension uses <strong>undocumented internal APIs</strong> from claude.ai that <strong>Anthropic does not officially support</strong> for third-party use.
         <br><br>
         It may <strong>stop working at any time</strong> if Anthropic changes their internal endpoints.
         <br><br>
