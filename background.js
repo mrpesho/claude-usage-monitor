@@ -51,6 +51,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function fetchUsageData() {
+  const { disclaimerAccepted } = await chrome.storage.local.get(['disclaimerAccepted']);
+  if (!disclaimerAccepted) return { usageData: null, error: null };
+
   try {
     // Get the organization ID from the bootstrap data
     const bootstrapData = await fetchBootstrapData();
