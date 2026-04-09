@@ -115,8 +115,10 @@ function renderContent(data) {
 function renderError(message) {
   let hint = '';
 
-  if (message.includes('Not logged in') || message.includes('401') || message.includes('403')) {
+  if (message.includes('Not logged in') || message.includes('401')) {
     hint = `<div class="error-hint">Please <a href="https://claude.ai" target="_blank">log in to Claude</a> first.</div>`;
+  } else if (message.includes('403')) {
+    hint = `<div class="error-hint">Access denied by Claude. This may be a temporary issue — try clicking Refresh. If it persists, try <a href="https://claude.ai" target="_blank">reloading claude.ai</a> in a tab.</div>`;
   } else if (message.includes('429') || message.includes('Rate limited')) {
     hint = `<div class="error-hint">Claude is rate limiting requests. Check <a href="https://status.claude.com" target="_blank">status.claude.com</a> for outages. Will retry automatically.</div>`;
   } else if (message.includes('fetch')) {

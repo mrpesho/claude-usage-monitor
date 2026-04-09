@@ -59,7 +59,11 @@ async function fetchUsageData() {
       throw new Error('Not logged in to Claude');
     }
 
-    const orgId = bootstrapData.account.memberships?.[0]?.organization?.uuid;
+    const memberships = bootstrapData.account.memberships || [];
+    const chatMembership = memberships.find(m =>
+      m.organization?.capabilities?.includes('chat')
+    ) || memberships[0];
+    const orgId = chatMembership?.organization?.uuid;
     if (!orgId) {
       throw new Error('Could not find organization ID');
     }
@@ -150,7 +154,9 @@ async function fetchOrganizationUsage(orgId) {
     if (response.status === 429) {
       throw new Error('Rate limited by Claude (429). Service may be experiencing issues.');
     }
-    throw new Error(`Usage fetch failed: ${response.status}`);
+    let body = '';
+    try { body = await response.text(); } catch {}
+    throw new Error(`Usage fetch failed: ${response.status}${body ? ' — ' + body.slice(0, 200) : ''}`);
   }
 
   return response.json();
