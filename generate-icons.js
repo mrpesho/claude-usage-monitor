@@ -12,8 +12,8 @@ function createIcon(size) {
   const radius = size / 2 - 1;
 
   // Colors
-  const orange = { r: 217, g: 119, b: 6 };       // #D97706 - main circle
-  const trackColor = { r: 180, g: 95, b: 5 };    // Darker orange for empty track
+  const teal = { r: 8, g: 145, b: 178 };          // #0891B2 - main circle
+  const trackColor = { r: 6, g: 115, b: 142 };   // Darker teal for empty track
   const fillColor = { r: 255, g: 255, b: 255 };  // White for filled portion
 
   // Arc parameters (left-side semi-circle progress bar)
@@ -54,9 +54,9 @@ function createIcon(size) {
         const edgeDist = radius - dist;
         const alpha = Math.min(1, edgeDist * 2) * 255;
 
-        pixels[idx] = orange.r;
-        pixels[idx + 1] = orange.g;
-        pixels[idx + 2] = orange.b;
+        pixels[idx] = teal.r;
+        pixels[idx + 1] = teal.g;
+        pixels[idx + 2] = teal.b;
         pixels[idx + 3] = Math.round(alpha);
 
         // Check for rounded caps first
@@ -67,9 +67,9 @@ function createIcon(size) {
         if (distToStartCap <= capRadius) {
           const capAlpha = Math.min(1, (capRadius - distToStartCap) * 2.5);
           const blend = capAlpha * 0.95;
-          pixels[idx] = Math.round(orange.r * (1 - blend) + fillColor.r * blend);
-          pixels[idx + 1] = Math.round(orange.g * (1 - blend) + fillColor.g * blend);
-          pixels[idx + 2] = Math.round(orange.b * (1 - blend) + fillColor.b * blend);
+          pixels[idx] = Math.round(teal.r * (1 - blend) + fillColor.r * blend);
+          pixels[idx + 1] = Math.round(teal.g * (1 - blend) + fillColor.g * blend);
+          pixels[idx + 2] = Math.round(teal.b * (1 - blend) + fillColor.b * blend);
           continue;
         }
 
@@ -77,9 +77,9 @@ function createIcon(size) {
         if (distToProgressCap <= capRadius) {
           const capAlpha = Math.min(1, (capRadius - distToProgressCap) * 2.5);
           const blend = capAlpha * 0.95;
-          pixels[idx] = Math.round(orange.r * (1 - blend) + fillColor.r * blend);
-          pixels[idx + 1] = Math.round(orange.g * (1 - blend) + fillColor.g * blend);
-          pixels[idx + 2] = Math.round(orange.b * (1 - blend) + fillColor.b * blend);
+          pixels[idx] = Math.round(teal.r * (1 - blend) + fillColor.r * blend);
+          pixels[idx + 1] = Math.round(teal.g * (1 - blend) + fillColor.g * blend);
+          pixels[idx + 2] = Math.round(teal.b * (1 - blend) + fillColor.b * blend);
           continue;
         }
 
@@ -106,9 +106,9 @@ function createIcon(size) {
             const arcAlpha = Math.min(1, arcEdgeDist * 2.5);
             const blend = arcAlpha * 0.95;
 
-            pixels[idx] = Math.round(orange.r * (1 - blend) + fillColor.r * blend);
-            pixels[idx + 1] = Math.round(orange.g * (1 - blend) + fillColor.g * blend);
-            pixels[idx + 2] = Math.round(orange.b * (1 - blend) + fillColor.b * blend);
+            pixels[idx] = Math.round(teal.r * (1 - blend) + fillColor.r * blend);
+            pixels[idx + 1] = Math.round(teal.g * (1 - blend) + fillColor.g * blend);
+            pixels[idx + 2] = Math.round(teal.b * (1 - blend) + fillColor.b * blend);
           }
           // Unfilled portion: no track, just empty
         }
