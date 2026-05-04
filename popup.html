@@ -327,21 +327,31 @@
     }
 
     .badge-toggle {
-      opacity: 0;
+      opacity: 1;
       cursor: pointer;
       font-size: 12px;
       margin-left: 4px;
-      transition: opacity 0.15s;
       vertical-align: middle;
-    }
-
-    .usage-section:hover .badge-toggle.on {
-      opacity: 1;
+      position: relative;
+      display: inline-block;
+      padding: 2px;
     }
 
     .badge-toggle.off {
-      opacity: 1;
       color: #555;
+    }
+
+    .badge-toggle.off::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      width: 1.5px;
+      height: 13px;
+      background: #555;
+      border-radius: 1px;
+      pointer-events: none;
     }
   </style>
 </head>
