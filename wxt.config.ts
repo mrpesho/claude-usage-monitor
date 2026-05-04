@@ -9,6 +9,9 @@ export default defineConfig({
     description: 'Shows Claude AI usage status in your browser toolbar',
     permissions: ['alarms', 'storage'],
     host_permissions: ['https://claude.ai/*'],
+    data_collection_permissions: {
+      collects_data: false,
+    },
     icons: {
       16: 'icons/icon16.png',
       48: 'icons/icon48.png',
