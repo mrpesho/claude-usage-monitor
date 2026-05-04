@@ -1,6 +1,6 @@
 {
   "name": "claude-usage-monitor",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Shows Claude AI usage status in your browser toolbar",
   "scripts": {
     "dev": "wxt",
