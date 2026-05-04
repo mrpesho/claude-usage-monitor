@@ -2,7 +2,7 @@
 
 > **Unofficial & Experimental** — This extension uses undocumented internal APIs and may break at any time without notice.
 
-A Chrome extension that displays your Claude AI usage status in the browser toolbar.
+A browser extension that displays your Claude AI usage status in the browser toolbar. Supports Chrome and Firefox.
 
 <img src="preview.gif" width="300" alt="Claude Usage Monitor Preview">
 
@@ -24,77 +24,60 @@ Anthropic has clarified that they cannot officially endorse the use of internal 
   - **Blue** — 7-day overall
   - **Purple** — 7-day Sonnet
   - **Pink** — 7-day Opus
+  - **Pink-light** — 7-day Design (Claude Design)
   - **Cyan** — 7-day OAuth Apps
   - **Green** — 7-day Cowork
   - **Gray** — Other
+  - **Sky** — Routine Runs (daily)
   - **Rose** — Extra Usage
+- Toggle individual metrics on/off from the badge cycle
 - Detailed popup with progress bars and reset times
 - Collapsible cards — click any card to collapse/expand; layout persists across sessions
-- Extra Usage section showing monthly limit, amount used, and computed percentage
+- Extra Usage section showing monthly limit, amount used, and prepaid credit balance
+- Routine Runs showing daily limit and usage count
+- Raw API data viewer with copy-to-clipboard
 - Automatic retry with exponential backoff on rate-limited (429) responses
-- Configurable auto-refresh interval (5min – 1hour)
+- Configurable auto-refresh interval (2–30 min)
 - Works with your existing Claude session (no API key needed)
 - All data stays local — nothing ever leaves your browser
 
 ## Installation
 
-Since this is an unofficial extension, it's distributed via GitHub and must be installed manually in developer mode.
+- **Chrome:** [Chrome Web Store](https://chromewebstore.google.com/detail/claude-usage-monitor/ieengjioikahclfklclkjgfobgmnndee)
+- **Firefox:** [Firefox Add-ons](https://addons.mozilla.org/en-GB/firefox/addon/the-claude-usage-monitor/)
 
-### Step 1: Download
+### Build from source
 
-**Option A: Download from Releases (Recommended)**
-1. Go to the [Releases](../../releases) page
-2. Download the latest `claude-usage-monitor.zip`
-3. Extract the ZIP to a folder on your computer
-
-**Option B: Clone with Git**
 ```bash
 git clone https://github.com/mrpesho/claude-usage-monitor.git
+cd claude-usage-monitor
+npm install
+npm run build          # Chrome → .output/chrome-mv3/
+npm run build:firefox  # Firefox → .output/firefox-mv2/
 ```
 
-**Option C: Download source ZIP**
-1. Click the green **Code** button above
-2. Select **Download ZIP**
-3. Extract the ZIP to a folder on your computer
-
-### Step 2: Install in Chrome
-
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable **Developer mode** (toggle in the top-right corner)
-3. Click **Load unpacked**
-4. Select the `claude-usage-monitor` folder (the one containing `manifest.json`)
-5. The extension icon should appear in your toolbar
-
-### Step 3: Pin the Extension (Optional)
-
-1. Click the puzzle piece icon in Chrome's toolbar
-2. Find "Claude Usage Monitor" and click the pin icon
-3. The extension badge will now always be visible
+Load the output folder as an unpacked extension in Chrome (`chrome://extensions/` → Developer mode → Load unpacked) or Firefox (`about:debugging` → Load Temporary Add-on → select `manifest.json`).
 
 ## Requirements
 
-- Google Chrome (or Chromium-based browser like Brave, Edge)
+- Chrome (or Chromium-based browser: Brave, Edge) — or Firefox
 - You must be logged into [claude.ai](https://claude.ai) in your browser
 - The extension uses your existing browser session cookies
 
 ## How It Works
 
-The extension fetches usage data from Claude's internal API endpoints using your existing browser session. Specifically:
+The extension fetches usage data from Claude's internal API endpoints using your existing browser session:
 
 1. `/api/bootstrap` — Gets your organization ID from your logged-in session
 2. `/api/organizations/{orgId}/usage` — Fetches your current usage data
-3. `/api/organizations/{orgId}/prepaid/credits` — Fetches your current prepaid balance
+3. `/api/organizations/{orgId}/prepaid/credits` — Fetches your prepaid credit balance
+4. `/v1/code/routines/run-budget` — Fetches your daily routine run budget
 
-**Privacy:** The extension does not extract or store your login credentials. It relies on your existing browser session to fetch data from claude.ai. Usage data is cached locally in your browser's extension storage and never leaves your browser.
+**Privacy:** The extension does not extract or store your login credentials. It relies on your existing browser session to fetch data from claude.ai. All data is cached locally in your browser's extension storage and never leaves your browser.
 
 ## Updating
 
-Since this isn't installed from the Chrome Web Store, you'll need to update manually:
-
-1. Download the latest release or pull changes (`git pull`)
-2. Replace the extension files (or extract to the same folder)
-3. Go to `chrome://extensions/`
-4. Click the refresh icon on the Claude Usage Monitor card
+Updates are delivered automatically through the Chrome Web Store and Firefox Add-ons.
 
 ## Troubleshooting
 
