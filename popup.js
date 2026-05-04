@@ -380,11 +380,7 @@ function renderUsageSection(section) {
     percentage = null;
   }
 
-  // Use section color, but override to red if critical
-  let barColor = section.color || '#10b981';
-  if (percentage !== null && percentage >= 90) {
-    barColor = '#dc2626'; // Red for critical
-  }
+  const barColor = section.color || '#10b981';
 
   let valueDisplay = '';
   if (section.used !== undefined && section.limit !== undefined) {
