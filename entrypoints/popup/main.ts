@@ -94,7 +94,7 @@ function renderContent(data: any) {
   currentData = data;
   if (data.error) { renderError(data.error); return; }
   if (!data.usageData) { renderError('No usage data available'); return; }
-  renderUsage(data.usageData, data.lastUpdated, data.prepaidCredits);
+  renderUsage(data.usageData, data.lastUpdated, data.prepaidCredits, data.routineBudget);
 }
 
 function renderError(message: string) {
@@ -117,7 +117,7 @@ function renderError(message: string) {
   `;
 }
 
-function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any) {
+function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, routineBudget: any) {
   let html = '';
   const usageInfo = parseUsageData(usageData, prepaidCredits);
 
@@ -151,6 +151,7 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any) {
       <div class="raw-data-label">Usage</div>
       <div class="raw-data" id="rawDataUsage"></div>
       ${prepaidCredits ? '<div class="raw-data-label">Prepaid Credits</div><div class="raw-data" id="rawDataPrepaid"></div>' : ''}
+      ${routineBudget ? '<div class="raw-data-label">Routine Budget</div><div class="raw-data" id="rawDataRoutine"></div>' : ''}
     </div>
   `;
 
@@ -204,6 +205,8 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any) {
     document.getElementById('rawDataUsage')!.textContent = JSON.stringify(usageData, null, 2);
     const prepaidEl = document.getElementById('rawDataPrepaid');
     if (prepaidEl) prepaidEl.textContent = JSON.stringify(prepaidCredits, null, 2);
+    const routineEl = document.getElementById('rawDataRoutine');
+    if (routineEl) routineEl.textContent = JSON.stringify(routineBudget, null, 2);
   });
 }
 

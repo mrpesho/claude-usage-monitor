@@ -34,7 +34,7 @@ export default defineBackground(() => {
     }
     if (message.action === 'getStoredUsage') {
       browser.storage.local
-        .get(['usageData', 'prepaidCredits', 'lastUpdated', 'error', 'refreshInterval'])
+        .get(['usageData', 'prepaidCredits', 'routineBudget', 'lastUpdated', 'error', 'refreshInterval'])
         .then(sendResponse);
       return true;
     }
@@ -90,6 +90,7 @@ export default defineBackground(() => {
       const dataToStore = {
         usageData,
         prepaidCredits,
+        routineBudget,
         lastUpdated: Date.now(),
         error: null,
       };
