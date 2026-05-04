@@ -17,3 +17,5 @@ Thumbs.db
 
 # Build artifacts
 *.zip
+.output/
+.wxt/
