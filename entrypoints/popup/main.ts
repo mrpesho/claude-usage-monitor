@@ -148,10 +148,10 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
     </div>
     <button class="toggle-raw" id="toggleRaw">Show raw data</button>
     <div id="rawDataContainer" style="display:none;">
-      <div class="raw-data-label">Usage</div>
+      <div class="raw-data-label"><span>Usage</span><button class="copy-btn" data-target="rawDataUsage">&#x2398; Copy</button></div>
       <div class="raw-data" id="rawDataUsage"></div>
-      ${prepaidCredits ? '<div class="raw-data-label">Prepaid Credits</div><div class="raw-data" id="rawDataPrepaid"></div>' : ''}
-      ${routineBudget ? '<div class="raw-data-label">Routine Budget</div><div class="raw-data" id="rawDataRoutine"></div>' : ''}
+      ${prepaidCredits ? '<div class="raw-data-label"><span>Prepaid Credits</span><button class="copy-btn" data-target="rawDataPrepaid">&#x2398; Copy</button></div><div class="raw-data" id="rawDataPrepaid"></div>' : ''}
+      ${routineBudget ? '<div class="raw-data-label"><span>Routine Budget</span><button class="copy-btn" data-target="rawDataRoutine">&#x2398; Copy</button></div><div class="raw-data" id="rawDataRoutine"></div>' : ''}
     </div>
   `;
 
@@ -207,6 +207,17 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
     if (prepaidEl) prepaidEl.textContent = JSON.stringify(prepaidCredits, null, 2);
     const routineEl = document.getElementById('rawDataRoutine');
     if (routineEl) routineEl.textContent = JSON.stringify(routineBudget, null, 2);
+  });
+
+  document.querySelectorAll('.copy-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const el = btn as HTMLElement;
+      const target = document.getElementById(el.dataset.target!);
+      if (!target) return;
+      await navigator.clipboard.writeText(target.textContent || '');
+      el.textContent = '\u2713 Copied';
+      setTimeout(() => { el.textContent = '\u2398 Copy'; }, 1500);
+    });
   });
 }
 
