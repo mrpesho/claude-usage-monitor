@@ -272,27 +272,40 @@ function parseUsageData(data, prepaidCredits) {
     'seven_day': { label: '7-Day Overall', color: '#3B82F6' },          // Blue
     'seven_day_sonnet': { label: '7-Day Sonnet', color: '#8B5CF6' },    // Purple
     'seven_day_opus': { label: '7-Day Opus', color: '#EC4899' },        // Pink
+    'seven_day_omelette': { label: '7-Day Design', color: '#F472B6' },  // Pink-light
+    'omelette_promotional': { label: 'Design Promo', color: '#FB923C' }, // Orange-light
     'seven_day_oauth_apps': { label: '7-Day OAuth Apps', color: '#06B6D4' }, // Cyan
     'seven_day_cowork': { label: '7-Day Cowork', color: '#10B981' },    // Green
-    'iguana_necktie': { label: 'Other', color: '#78716C' }              // Gray
+    'iguana_necktie': { label: 'Other', color: '#78716C' },             // Gray
+    'tangelo': { label: 'Tangelo', color: '#A78BFA' },                  // Violet
+    'routine_runs': { label: 'Routine Runs (daily)', color: '#0EA5E9' } // Sky
   };
 
   const windowOrder = [
     'five_hour', 'seven_day', 'seven_day_sonnet', 'seven_day_opus',
-    'seven_day_oauth_apps', 'seven_day_cowork', 'iguana_necktie'
+    'seven_day_omelette', 'omelette_promotional',
+    'seven_day_oauth_apps', 'seven_day_cowork', 'iguana_necktie', 'tangelo',
+    'routine_runs'
   ];
 
   for (const key of windowOrder) {
     const window = data[key];
     if (window && window.utilization != null) {
       const config = windowConfig[key];
-      sections.push({
+      const section = {
         key: key,
         label: config.label,
         color: config.color,
         percentage: window.utilization,
         resetDate: window.resets_at
-      });
+      };
+      // Count-based metrics: show "used / limit" instead of percentage
+      if (window.used !== undefined && window.limit !== undefined) {
+        section.used = window.used;
+        section.limit = window.limit;
+        section.unit = 'runs';
+      }
+      sections.push(section);
     }
   }
 

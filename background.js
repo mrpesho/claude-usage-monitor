@@ -71,11 +71,24 @@ async function fetchUsageData() {
       throw new Error('Could not find organization ID');
     }
 
-    // Fetch usage data and prepaid credits in parallel
-    const [usageData, prepaidCredits] = await Promise.all([
+    // Fetch usage data, prepaid credits, and routine budget in parallel
+    const [usageData, prepaidCredits, routineBudget] = await Promise.all([
       fetchOrganizationUsage(orgId),
-      fetchPrepaidCredits(orgId).catch(() => null)
+      fetchPrepaidCredits(orgId).catch(() => null),
+      fetchRoutineBudget(orgId).catch(() => null)
     ]);
+
+    // Merge routine budget into usageData as a normalized entry
+    if (routineBudget) {
+      const used = parseInt(routineBudget.used, 10);
+      const limit = parseInt(routineBudget.limit, 10);
+      usageData.routine_runs = {
+        utilization: limit > 0 ? Math.round((used / limit) * 100) : 0,
+        resets_at: routineBudget.resets_at,
+        used,
+        limit
+      };
+    }
 
     // Store the data
     const dataToStore = {
@@ -165,6 +178,25 @@ async function fetchOrganizationUsage(orgId) {
   return response.json();
 }
 
+async function fetchRoutineBudget(orgId) {
+  const response = await fetchWithRetry(`${CLAUDE_BASE_URL}/v1/code/routines/run-budget`, {
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Anthropic-Version': '2023-06-01',
+      'Anthropic-Beta': 'ccr-triggers-2026-01-30',
+      'Anthropic-Client-Platform': 'web_claude_ai',
+      'X-Organization-Uuid': orgId,
+    }
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return response.json();
+}
+
 async function fetchPrepaidCredits(orgId) {
   const response = await fetchWithRetry(`${CLAUDE_BASE_URL}/api/organizations/${orgId}/prepaid/credits`, {
     credentials: 'include',
@@ -186,9 +218,13 @@ const BADGE_SOURCES = [
   { key: 'seven_day', label: '7d', color: '#3B82F6' },           // Blue - overall
   { key: 'seven_day_sonnet', label: 'So', color: '#8B5CF6' },    // Purple - Sonnet
   { key: 'seven_day_opus', label: 'Op', color: '#EC4899' },      // Pink - Opus
+  { key: 'seven_day_omelette', label: 'De', color: '#F472B6' },  // Pink-light - Design
+  { key: 'omelette_promotional', label: 'DP', color: '#FB923C' }, // Orange-light - Design Promo
   { key: 'seven_day_oauth_apps', label: 'OA', color: '#06B6D4' }, // Cyan - OAuth Apps
   { key: 'seven_day_cowork', label: 'Cw', color: '#10B981' },    // Green - Cowork
   { key: 'iguana_necktie', label: 'Ot', color: '#78716C' },      // Gray - Other
+  { key: 'tangelo', label: 'Tg', color: '#A78BFA' },             // Violet - Tangelo
+  { key: 'routine_runs', label: 'Rn', color: '#0EA5E9' },        // Sky - Routine runs
   { key: 'extra_usage', label: 'Ex', color: '#E11D48' }          // Rose - Extra
 ];
 const CYCLE_INTERVAL_MS = 4000;
