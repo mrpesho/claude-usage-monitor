@@ -232,6 +232,8 @@ interface UsageSection {
   unit?: string;
   details?: Record<string, string>;
   disabled?: boolean;
+  isActive?: boolean;
+  severity?: string;
 }
 
 function parseUsageData(data: any, prepaidCredits: any): { sections: UsageSection[] } {
@@ -248,7 +250,7 @@ function parseUsageData(data: any, prepaidCredits: any): { sections: UsageSectio
     seven_day_cowork:     { label: '7-Day Cowork',      color: '#10B981' },
     iguana_necktie:       { label: 'Other',             color: '#78716C' },
     tangelo:              { label: 'Tangelo',           color: '#A78BFA' },
-    routine_runs:         { label: 'Routine Runs (daily)', color: '#0EA5E9' },
+    routine_runs:         { label: 'Routine Runs (daily)', color: '#EAB308' },
   };
 
   const windowOrder = [
@@ -271,34 +273,141 @@ function parseUsageData(data: any, prepaidCredits: any): { sections: UsageSectio
         section.limit = win.limit;
         section.unit = 'runs';
       }
+      // Add dollar amounts if available
+      if (win.used_dollars != null && win.limit_dollars != null) {
+        section.details = section.details || {};
+        section.details['Used'] = `$${win.used_dollars.toFixed(2)}`;
+        section.details['Limit'] = `$${win.limit_dollars.toFixed(2)}`;
+        section.details['Remaining'] = `$${win.remaining_dollars.toFixed(2)}`;
+      }
       sections.push(section);
     }
   }
 
-  const extra = data.extra_usage;
-  if (extra) {
-    if (extra.is_enabled) {
-      const currencyMap: Record<string, string> = {
-        USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'C$', AUD: 'A$',
-        CHF: 'CHF', CNY: '¥', INR: '₹', RUB: '₽', SEK: 'kr', MXN: 'Mex$', SGD: 'S$',
+  // Parse limits[] array for model-scoped limits not covered by legacy keys
+  const limits = data.limits;
+  if (Array.isArray(limits)) {
+    const scopedLimits = limits.filter((l: any) => l.scope?.model || l.scope?.surface);
+    for (const limit of scopedLimits) {
+      const modelName = limit.scope?.model?.display_name || limit.scope?.surface || 'Unknown';
+      const groupLabel = limit.group === 'session' ? 'Session' : 'Weekly';
+      const key = `limit_${limit.kind}`;
+      const section: UsageSection = {
+        key,
+        label: `${groupLabel} ${modelName}`,
+        color: '#14B8A6',
+        percentage: limit.percent,
+        resetDate: limit.resets_at,
+        isActive: limit.is_active,
+        severity: limit.severity,
       };
-      const cur = prepaidCredits?.currency;
-      const sym = currencyMap[cur] || cur || '$';
-      const fmt = (v: number) => `${sym} ${(v / 100).toFixed(2)}`;
-      const details: Record<string, string> = {
-        'Monthly Limit': extra.monthly_limit != null ? fmt(extra.monthly_limit) : 'N/A',
-        'Used': extra.used_credits != null ? fmt(extra.used_credits) : fmt(0),
-      };
-      if (prepaidCredits?.amount != null) details['Balance'] = fmt(prepaidCredits.amount);
+      sections.push(section);
+    }
+
+    // Mark active limit from the limits array on matching legacy sections
+    for (const limit of limits) {
+      if (!limit.is_active) continue;
+      if (limit.kind === 'session') {
+        const fiveHour = sections.find(s => s.key === 'five_hour');
+        if (fiveHour) fiveHour.isActive = true;
+      } else if (limit.kind === 'weekly_all') {
+        const sevenDay = sections.find(s => s.key === 'seven_day');
+        if (sevenDay) sevenDay.isActive = true;
+      }
+    }
+
+    // Apply severity from limits array to matching sections
+    for (const limit of limits) {
+      if (limit.severity && limit.severity !== 'normal') {
+        if (limit.kind === 'session') {
+          const fiveHour = sections.find(s => s.key === 'five_hour');
+          if (fiveHour) fiveHour.severity = limit.severity;
+        } else if (limit.kind === 'weekly_all') {
+          const sevenDay = sections.find(s => s.key === 'seven_day');
+          if (sevenDay) sevenDay.severity = limit.severity;
+        }
+      }
+    }
+  }
+
+  // Use `spend` object if available (richer than extra_usage)
+  const spend = data.spend;
+  if (spend) {
+    const currencyMap: Record<string, string> = {
+      USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'C$', AUD: 'A$',
+      CHF: 'CHF', CNY: '¥', INR: '₹', RUB: '₽', SEK: 'kr', MXN: 'Mex$', SGD: 'S$',
+    };
+    const cur = spend.used?.currency || spend.limit?.currency || prepaidCredits?.currency;
+    const sym = currencyMap[cur] || cur || '$';
+    const exp = spend.used?.exponent || 2;
+    const fmtMoney = (minor: number) => `${sym}${(minor / Math.pow(10, exp)).toFixed(exp)}`;
+
+    const details: Record<string, string> = {};
+    if (spend.limit) details['Limit'] = fmtMoney(spend.limit.amount_minor);
+    if (spend.used) details['Used'] = fmtMoney(spend.used.amount_minor);
+    // Only show cap if it differs from limit
+    if (spend.cap?.money && spend.limit && spend.cap.money.amount_minor !== spend.limit.amount_minor) {
+      details['Cap'] = fmtMoney(spend.cap.money.amount_minor);
+    }
+    if (prepaidCredits?.amount != null) details['Balance'] = fmtMoney(prepaidCredits.amount);
+
+    // Prepaid credit expiry
+    if (prepaidCredits?.next_expires_at) {
+      details['Expires'] = formatDate(prepaidCredits.next_expires_at);
+    }
+
+    // Tranche info
+    if (prepaidCredits?.promo_tranches?.length) {
+      const tranche = prepaidCredits.promo_tranches[0];
+      const remaining = fmtMoney(tranche.remaining_amount_minor_units);
+      const granted = fmtMoney(tranche.granted_amount_minor_units);
+      details['Promo Credits'] = `${remaining} / ${granted}`;
+    }
+
+    if (spend.enabled) {
       sections.push({
-        key: 'extra_usage', label: 'Extra Usage', color: '#E11D48',
-        percentage: extra.monthly_limit
-          ? (extra.used_credits / extra.monthly_limit) * 100
-          : extra.utilization,
+        key: 'extra_usage', label: 'Usage Credits', color: '#E11D48',
+        percentage: spend.percent || 0,
+        severity: spend.severity !== 'normal' ? spend.severity : undefined,
         resetDate: null, details,
       });
     } else {
-      sections.push({ key: 'extra_usage', label: 'Extra Usage', color: '#78716C', disabled: true });
+      sections.push({
+        key: 'extra_usage', label: 'Usage Credits', color: '#78716C',
+        disabled: true,
+        details: spend.disabled_reason ? { 'Reason': spend.disabled_reason } : undefined,
+      });
+    }
+  } else {
+    // Fallback to legacy extra_usage
+    const extra = data.extra_usage;
+    if (extra) {
+      if (extra.is_enabled) {
+        const currencyMap: Record<string, string> = {
+          USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'C$', AUD: 'A$',
+          CHF: 'CHF', CNY: '¥', INR: '₹', RUB: '₽', SEK: 'kr', MXN: 'Mex$', SGD: 'S$',
+        };
+        const cur = prepaidCredits?.currency;
+        const sym = currencyMap[cur] || cur || '$';
+        const fmt = (v: number) => `${sym}${(v / 100).toFixed(2)}`;
+        const details: Record<string, string> = {
+          'Monthly Limit': extra.monthly_limit != null ? fmt(extra.monthly_limit) : 'N/A',
+          'Used': extra.used_credits != null ? fmt(extra.used_credits) : fmt(0),
+        };
+        if (prepaidCredits?.amount != null) details['Balance'] = fmt(prepaidCredits.amount);
+        if (prepaidCredits?.next_expires_at) {
+          details['Expires'] = formatDate(prepaidCredits.next_expires_at);
+        }
+        sections.push({
+          key: 'extra_usage', label: 'Extra Usage', color: '#E11D48',
+          percentage: extra.monthly_limit
+            ? (extra.used_credits / extra.monthly_limit) * 100
+            : extra.utilization,
+          resetDate: null, details,
+        });
+      } else {
+        sections.push({ key: 'extra_usage', label: 'Extra Usage', color: '#78716C', disabled: true });
+      }
     }
   }
 
@@ -309,6 +418,8 @@ function renderUsageSection(section: UsageSection): string {
   const isCollapsed = collapsedCards[section.key] === true;
   const stateClass = isCollapsed ? 'collapsed' : 'expanded';
   const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${section.color || '#888'};margin-right:6px;"></span>`;
+  const activeIndicator = section.isActive ? '<span class="active-badge">ACTIVE</span>' : '';
+  const severityClass = section.severity && section.severity !== 'normal' ? ` severity-${section.severity}` : '';
 
   if (section.disabled) {
     return `
@@ -317,7 +428,7 @@ function renderUsageSection(section: UsageSection): string {
           <span class="usage-label">${dot}${escapeHtml(section.label)}<span class="toggle-arrow">▾</span></span>
           <span class="usage-value" style="color:#666;">Disabled</span>
         </div>
-        <div class="usage-body"><div class="disabled-hint">Enable extra usage in your Claude account settings</div></div>
+        <div class="usage-body"><div class="disabled-hint">Enable usage credits in your Claude account settings</div></div>
       </div>`;
   }
 
@@ -343,10 +454,10 @@ function renderUsageSection(section: UsageSection): string {
   const toggleTitle = isVisible ? 'Hide from icon badge' : 'Show in icon badge';
 
   let html = `
-    <div class="usage-section ${stateClass}" data-key="${section.key}">
+    <div class="usage-section ${stateClass}${severityClass}" data-key="${section.key}">
       <div class="usage-header">
         <span class="usage-label">
-          ${dot}${escapeHtml(section.label)}
+          ${dot}${escapeHtml(section.label)}${activeIndicator}
           <span class="badge-toggle ${toggleClass}" data-key="${section.key}" data-color="${section.color || '#888'}" title="${toggleTitle}" style="${toggleColor}">&#x21BB;</span>
           <span class="toggle-arrow">▾</span>
         </span>

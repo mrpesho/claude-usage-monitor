@@ -214,7 +214,7 @@ export default defineBackground(() => {
     { key: 'seven_day_cowork', label: 'Cw', color: '#10B981' },
     { key: 'iguana_necktie', label: 'Ot', color: '#78716C' },
     { key: 'tangelo', label: 'Tg', color: '#A78BFA' },
-    { key: 'routine_runs', label: 'Rn', color: '#0EA5E9' },
+    { key: 'routine_runs', label: 'Rn', color: '#EAB308' },
     { key: 'extra_usage', label: 'Ex', color: '#E11D48' },
   ];
   const CYCLE_INTERVAL_MS = 4000;
@@ -233,21 +233,68 @@ export default defineBackground(() => {
     }, CYCLE_INTERVAL_MS);
   }
 
+  function getBadgeSources(usageData: any): { key: string; label: string; color: string }[] {
+    const sources = [...BADGE_SOURCES];
+
+    // Insert model-scoped limits from limits[] array before extra_usage
+    if (Array.isArray(usageData.limits)) {
+      const scopedLimits = usageData.limits.filter((l: any) => l.scope?.model || l.scope?.surface);
+      const extraIndex = sources.findIndex(s => s.key === 'extra_usage');
+      const insertAt = extraIndex !== -1 ? extraIndex : sources.length;
+      let offset = 0;
+      for (const limit of scopedLimits) {
+        const modelName = limit.scope?.model?.display_name || limit.scope?.surface || 'Unknown';
+        const key = `limit_${limit.kind}`;
+        if (!sources.find(s => s.key === key)) {
+          const groupLabel = limit.group === 'session' ? 'Ss' : 'Wk';
+          sources.splice(insertAt + offset, 0, {
+            key,
+            label: `${groupLabel} ${modelName}`,
+            color: '#14B8A6',
+          });
+          offset++;
+        }
+      }
+    }
+
+    return sources;
+  }
+
   function getUtilization(usageData: any, key: string): number | null {
     const data = usageData[key];
-    if (!data) return null;
+    if (!data) {
+      // Check limits array for dynamic keys (limit_weekly_scoped etc.)
+      if (key.startsWith('limit_') && Array.isArray(usageData.limits)) {
+        const kind = key.replace('limit_', '');
+        const limit = usageData.limits.find((l: any) => l.kind === kind);
+        if (limit) return limit.percent;
+      }
+      return null;
+    }
     if (data.utilization != null) return data.utilization;
-    if (key === 'extra_usage' && data.is_enabled && data.monthly_limit) {
-      return Math.round((data.used_credits / data.monthly_limit) * 100);
+    if (key === 'extra_usage') {
+      // Use spend.percent if available
+      if (usageData.spend?.enabled) return usageData.spend.percent || 0;
+      if (data.is_enabled && data.monthly_limit) {
+        return Math.round((data.used_credits / data.monthly_limit) * 100);
+      }
     }
     return null;
   }
 
   function displayNextBadge(usageData: any, badgeVisibility: Record<string, boolean>) {
+    const sources = getBadgeSources(usageData);
+    if (sources.length === 0) {
+      action.setBadgeText({ text: '-' });
+      action.setBadgeBackgroundColor({ color: '#888888' });
+      action.setTitle({ title: 'Claude Usage - No data' });
+      return;
+    }
+
     const startIndex = currentBadgeIndex;
     do {
-      currentBadgeIndex = (currentBadgeIndex + 1) % BADGE_SOURCES.length;
-      const source = BADGE_SOURCES[currentBadgeIndex];
+      currentBadgeIndex = (currentBadgeIndex + 1) % sources.length;
+      const source = sources[currentBadgeIndex];
       if (badgeVisibility[source.key] === false) continue;
       if (getUtilization(usageData, source.key) != null) {
         displayBadgeForSource(usageData, source);
@@ -281,10 +328,11 @@ export default defineBackground(() => {
 
     const { badgeVisibility } = await browser.storage.local.get(['badgeVisibility']);
     const visibility = (badgeVisibility as Record<string, boolean>) || {};
+    const sources = getBadgeSources(usageData);
 
     let found = false;
-    for (let i = 0; i < BADGE_SOURCES.length; i++) {
-      const source = BADGE_SOURCES[i];
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i];
       if (visibility[source.key] === false) continue;
       if (getUtilization(usageData, source.key) != null) {
         currentBadgeIndex = i;
