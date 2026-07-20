@@ -351,17 +351,29 @@ function parseUsageData(data: any, prepaidCredits: any): { sections: UsageSectio
     }
     if (prepaidCredits?.amount != null) details['Balance'] = fmtMoney(prepaidCredits.amount);
 
-    // Prepaid credit expiry
-    if (prepaidCredits?.next_expires_at) {
+    // Prepaid credit expiry (only show if no tranche breakdown)
+    const promoTranches = prepaidCredits?.promo_tranches || [];
+    const paidTranches = prepaidCredits?.tranches || [];
+    if (prepaidCredits?.next_expires_at && promoTranches.length === 0 && paidTranches.length === 0) {
       details['Expires'] = formatDate(prepaidCredits.next_expires_at);
     }
 
-    // Tranche info
-    if (prepaidCredits?.promo_tranches?.length) {
-      const tranche = prepaidCredits.promo_tranches[0];
+    // Individual promo tranches
+    for (let i = 0; i < promoTranches.length; i++) {
+      const tranche = promoTranches[i];
       const remaining = fmtMoney(tranche.remaining_amount_minor_units);
       const granted = fmtMoney(tranche.granted_amount_minor_units);
-      details['Promo Credits'] = `${remaining} / ${granted}`;
+      const expiry = formatAbsoluteDate(tranche.expires_at);
+      details[`Promo · ${expiry}`] = `${remaining} / ${granted}`;
+    }
+
+    // Individual paid tranches
+    for (let i = 0; i < paidTranches.length; i++) {
+      const tranche = paidTranches[i];
+      const remaining = fmtMoney(tranche.remaining_amount_minor_units);
+      const granted = fmtMoney(tranche.granted_amount_minor_units);
+      const expiry = tranche.expires_at ? formatAbsoluteDate(tranche.expires_at) : 'No expiry';
+      details[`Credit · ${expiry}`] = `${remaining} / ${granted}`;
     }
 
     if (spend.enabled) {
@@ -490,6 +502,15 @@ function formatNumber(num: number): string {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
   if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
   return num.toString();
+}
+
+function formatAbsoluteDate(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
 }
 
 function formatDate(dateStr: string): string {
