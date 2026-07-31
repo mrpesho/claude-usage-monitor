@@ -34,7 +34,7 @@ export default defineBackground(() => {
     }
     if (message.action === 'getStoredUsage') {
       browser.storage.local
-        .get(['usageData', 'prepaidCredits', 'routineBudget', 'lastUpdated', 'error', 'refreshInterval'])
+        .get(['usageData', 'prepaidCredits', 'routineBudget', 'lastUpdated', 'error', 'refreshInterval', 'badgeMode'])
         .then(sendResponse);
       return true;
     }
@@ -43,6 +43,25 @@ export default defineBackground(() => {
       browser.storage.local.set({ refreshInterval: interval }).then(() => {
         browser.alarms.clear('updateUsage').then(() => {
           browser.alarms.create('updateUsage', { periodInMinutes: interval });
+          sendResponse({ success: true });
+        });
+      });
+      return true;
+    }
+    if (message.action === 'setBadgeMode') {
+      browser.storage.local.set({ badgeMode: message.mode }).then(() => {
+        // Re-render badge with new mode
+        browser.storage.local.get(['usageData', 'badgeVisibility']).then((result) => {
+          if (result.usageData) {
+            if (message.mode === 'active') {
+              stopBadgeCycle();
+              displayActiveBadge(result.usageData, (result.badgeVisibility as Record<string, boolean>) || {});
+            } else {
+              const visibility = (result.badgeVisibility as Record<string, boolean>) || {};
+              displayNextBadge(result.usageData, visibility);
+              startBadgeCycle();
+            }
+          }
           sendResponse({ success: true });
         });
       });
@@ -233,6 +252,57 @@ export default defineBackground(() => {
     }, CYCLE_INTERVAL_MS);
   }
 
+  function stopBadgeCycle() {
+    if (cycleIntervalId) {
+      clearInterval(cycleIntervalId);
+      cycleIntervalId = null;
+    }
+  }
+
+  function displayActiveBadge(usageData: any, badgeVisibility: Record<string, boolean>) {
+    const sources = getBadgeSources(usageData);
+    const limits = usageData.limits;
+
+    // Find the active limit source
+    if (Array.isArray(limits)) {
+      for (const limit of limits) {
+        if (!limit.is_active) continue;
+
+        // Map limit kind to badge source key
+        let matchKey: string | null = null;
+        if (limit.kind === 'session') matchKey = 'five_hour';
+        else if (limit.kind === 'weekly_all') matchKey = 'seven_day';
+        else matchKey = `limit_${limit.kind}`;
+
+        const source = sources.find(s => s.key === matchKey);
+        if (source && badgeVisibility[source.key] !== false && getUtilization(usageData, source.key) != null) {
+          displayBadgeForSource(usageData, source);
+          return;
+        }
+      }
+    }
+
+    // Fallback: show highest utilization visible source
+    let bestSource: { key: string; label: string; color: string } | null = null;
+    let bestUtil = -1;
+    for (const source of sources) {
+      if (badgeVisibility[source.key] === false) continue;
+      const util = getUtilization(usageData, source.key);
+      if (util != null && util > bestUtil) {
+        bestUtil = util;
+        bestSource = source;
+      }
+    }
+
+    if (bestSource) {
+      displayBadgeForSource(usageData, bestSource);
+    } else {
+      action.setBadgeText({ text: '-' });
+      action.setBadgeBackgroundColor({ color: '#888888' });
+      action.setTitle({ title: 'Claude Usage - No active metric' });
+    }
+  }
+
   function getBadgeSources(usageData: any): { key: string; label: string; color: string }[] {
     const sources = [...BADGE_SOURCES];
 
@@ -326,8 +396,15 @@ export default defineBackground(() => {
       return;
     }
 
-    const { badgeVisibility } = await browser.storage.local.get(['badgeVisibility']);
+    const { badgeVisibility, badgeMode } = await browser.storage.local.get(['badgeVisibility', 'badgeMode']);
     const visibility = (badgeVisibility as Record<string, boolean>) || {};
+
+    if (badgeMode === 'active') {
+      stopBadgeCycle();
+      displayActiveBadge(usageData, visibility);
+      return;
+    }
+
     const sources = getBadgeSources(usageData);
 
     let found = false;

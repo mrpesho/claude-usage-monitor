@@ -7,6 +7,7 @@ const refreshBtn = document.getElementById('refreshBtn') as HTMLButtonElement;
 let showRawData = false;
 let currentData: any = null;
 let currentRefreshInterval = 5;
+let currentBadgeMode = 'cycle';
 let collapsedCards: Record<string, boolean> = {};
 let badgeVisibility: Record<string, boolean> = {};
 
@@ -70,6 +71,9 @@ async function loadStoredData() {
     const stored = await browser.runtime.sendMessage({ action: 'getStoredUsage' });
     if (stored.refreshInterval) {
       currentRefreshInterval = stored.refreshInterval;
+    }
+    if (stored.badgeMode) {
+      currentBadgeMode = stored.badgeMode;
     }
     if (stored && (stored.usageData || stored.error)) {
       renderContent(stored);
@@ -145,6 +149,13 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
           <option value="30" ${currentRefreshInterval === 30 ? 'selected' : ''}>30 min</option>
         </select>
       </div>
+      <div class="setting-row">
+        <span class="setting-label">Badge mode</span>
+        <select class="setting-select" id="badgeMode">
+          <option value="cycle" ${currentBadgeMode === 'cycle' ? 'selected' : ''}>Cycle selected</option>
+          <option value="active" ${currentBadgeMode === 'active' ? 'selected' : ''}>Active only</option>
+        </select>
+      </div>
     </div>
     <button class="toggle-raw" id="toggleRaw">Show raw data</button>
     <div id="rawDataContainer" style="display:none;">
@@ -161,6 +172,12 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
     const newInterval = parseInt((e.target as HTMLSelectElement).value, 10);
     currentRefreshInterval = newInterval;
     await browser.runtime.sendMessage({ action: 'setRefreshInterval', interval: newInterval });
+  });
+
+  (document.getElementById('badgeMode') as HTMLSelectElement).addEventListener('change', async (e) => {
+    const newMode = (e.target as HTMLSelectElement).value;
+    currentBadgeMode = newMode;
+    await browser.runtime.sendMessage({ action: 'setBadgeMode', mode: newMode });
   });
 
   document.querySelectorAll('.usage-section[data-key] .usage-header').forEach((header) => {
