@@ -13,6 +13,10 @@ export default defineBackground(() => {
 
   initAlarm();
 
+  // Open a survey page when the user uninstalls the extension
+  const surveyUrl = `https://docs.google.com/forms/d/e/1FAIpQLSeeJZxM7TqG97uUZcR1a-rpw20Q-Xp7IkZVds-85ugqjXKJ3g/viewform?entry.1583116375=${import.meta.env.BROWSER}`;
+  browser.runtime.setUninstallURL(surveyUrl);
+
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'updateUsage') {
       fetchUsageData();
