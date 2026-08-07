@@ -153,7 +153,7 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
         <span class="setting-label">Badge mode</span>
         <select class="setting-select" id="badgeMode">
           <option value="cycle" ${currentBadgeMode === 'cycle' ? 'selected' : ''}>Cycle selected</option>
-          <option value="active" ${currentBadgeMode === 'active' ? 'selected' : ''}>Active only</option>
+          <option value="active" ${currentBadgeMode === 'active' ? 'selected' : ''}>Show Active only</option>
         </select>
       </div>
     </div>
