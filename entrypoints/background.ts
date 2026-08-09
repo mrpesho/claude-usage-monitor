@@ -254,11 +254,12 @@ export default defineBackground(() => {
     }
   }
 
-  function displayActiveBadge(usageData: any, badgeVisibility: Record<string, boolean>) {
+  function displayActiveBadge(usageData: any, _badgeVisibility: Record<string, boolean>) {
     const sources = getBadgeSources(usageData);
     const limits = usageData.limits;
 
-    // Find the active limit source
+    // Find the active limit source (ignore badge visibility — user chose this mode
+    // specifically to see the active limit)
     if (Array.isArray(limits)) {
       for (const limit of limits) {
         if (!limit.is_active) continue;
@@ -270,18 +271,18 @@ export default defineBackground(() => {
         else matchKey = `limit_${limit.kind}`;
 
         const source = sources.find(s => s.key === matchKey);
-        if (source && badgeVisibility[source.key] !== false && getUtilization(usageData, source.key) != null) {
+        if (source && getUtilization(usageData, source.key) != null) {
           displayBadgeForSource(usageData, source);
           return;
         }
       }
     }
 
-    // Fallback: show highest utilization visible source
+    // Fallback: show highest utilization rate-limit source (exclude extra_usage/spend)
     let bestSource: { key: string; label: string; color: string } | null = null;
     let bestUtil = -1;
     for (const source of sources) {
-      if (badgeVisibility[source.key] === false) continue;
+      if (source.key === 'extra_usage') continue;
       const util = getUtilization(usageData, source.key);
       if (util != null && util > bestUtil) {
         bestUtil = util;
