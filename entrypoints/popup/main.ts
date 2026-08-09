@@ -1,25 +1,41 @@
 // Note: innerHTML is used throughout this file. All user-controlled/API data is
 // sanitized via escapeHtml() before insertion. Static HTML strings are hardcoded.
 
+import { KNOWN_METRICS, KNOWN_METRICS_MAP, ALL_KNOWN_KEYS } from '@/utils/metrics';
+
 const contentEl = document.getElementById('content')!;
 const refreshBtn = document.getElementById('refreshBtn') as HTMLButtonElement;
 
 let showRawData = false;
+let showUnknown = false;
 let currentData: any = null;
 let currentRefreshInterval = 5;
 let currentBadgeMode = 'cycle';
 let collapsedCards: Record<string, boolean> = {};
 let badgeVisibility: Record<string, boolean> = {};
 
+const labToggle = document.getElementById('labToggle')!;
+
 document.addEventListener('DOMContentLoaded', async () => {
-  const stored = await browser.storage.local.get(['disclaimerAccepted', 'collapsedCards', 'badgeVisibility']);
+  const stored = await browser.storage.local.get(['disclaimerAccepted', 'collapsedCards', 'badgeVisibility', 'showUnknown']);
   collapsedCards = (stored.collapsedCards as Record<string, boolean>) || {};
   badgeVisibility = (stored.badgeVisibility as Record<string, boolean>) || {};
+  showUnknown = (stored.showUnknown as boolean) || false;
+  if (showUnknown) labToggle.classList.add('active');
+  labToggle.title = showUnknown ? 'Hide unknown metrics' : 'Show unknown metrics';
   if (!stored.disclaimerAccepted) {
     showDisclaimer();
   } else {
     loadStoredData();
   }
+});
+
+labToggle.addEventListener('click', async () => {
+  showUnknown = !showUnknown;
+  labToggle.classList.toggle('active', showUnknown);
+  labToggle.title = showUnknown ? 'Hide unknown metrics' : 'Show unknown metrics';
+  await browser.storage.local.set({ showUnknown });
+  if (currentData) renderContent(currentData);
 });
 
 browser.storage.onChanged.addListener((changes, area) => {
@@ -125,8 +141,9 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
   let html = '';
   const usageInfo = parseUsageData(usageData, prepaidCredits);
 
-  if (usageInfo.sections.length > 0) {
-    for (const section of usageInfo.sections) {
+  const visibleSections = usageInfo.sections.filter(s => !s.unknown || showUnknown);
+  if (visibleSections.length > 0) {
+    for (const section of visibleSections) {
       html += renderUsageSection(section);
     }
   } else {
@@ -251,38 +268,19 @@ interface UsageSection {
   disabled?: boolean;
   isActive?: boolean;
   severity?: string;
+  unknown?: boolean;
 }
 
 function parseUsageData(data: any, prepaidCredits: any): { sections: UsageSection[] } {
   const sections: UsageSection[] = [];
 
-  const windowConfig: Record<string, { label: string; color: string }> = {
-    five_hour:            { label: '5-Hour Limit',      color: '#D97706' },
-    seven_day:            { label: '7-Day Overall',     color: '#3B82F6' },
-    seven_day_sonnet:     { label: '7-Day Sonnet',      color: '#8B5CF6' },
-    seven_day_opus:       { label: '7-Day Opus',        color: '#EC4899' },
-    seven_day_omelette:   { label: '7-Day Design',      color: '#F472B6' },
-    omelette_promotional: { label: 'Design Promo',      color: '#FB923C' },
-    seven_day_oauth_apps: { label: '7-Day OAuth Apps',  color: '#06B6D4' },
-    seven_day_cowork:     { label: '7-Day Cowork',      color: '#10B981' },
-    iguana_necktie:       { label: 'Other',             color: '#78716C' },
-    tangelo:              { label: 'Tangelo',           color: '#A78BFA' },
-    routine_runs:         { label: 'Routine Runs (daily)', color: '#EAB308' },
-  };
-
-  const windowOrder = [
-    'five_hour', 'seven_day', 'seven_day_sonnet', 'seven_day_opus',
-    'seven_day_omelette', 'omelette_promotional',
-    'seven_day_oauth_apps', 'seven_day_cowork', 'iguana_necktie', 'tangelo',
-    'routine_runs',
-  ];
-
-  for (const key of windowOrder) {
+  for (const metric of KNOWN_METRICS) {
+    const key = metric.key;
+    if (key === 'extra_usage') continue; // handled separately below
     const win = data[key];
     if (win && win.utilization != null) {
-      const config = windowConfig[key];
       const section: UsageSection = {
-        key, label: config.label, color: config.color,
+        key, label: metric.label, color: metric.color,
         percentage: win.utilization, resetDate: win.resets_at,
       };
       if (win.used !== undefined && win.limit !== undefined) {
@@ -290,12 +288,31 @@ function parseUsageData(data: any, prepaidCredits: any): { sections: UsageSectio
         section.limit = win.limit;
         section.unit = 'runs';
       }
-      // Add dollar amounts if available
       if (win.used_dollars != null && win.limit_dollars != null) {
         section.details = section.details || {};
         section.details['Used'] = `$${win.used_dollars.toFixed(2)}`;
         section.details['Limit'] = `$${win.limit_dollars.toFixed(2)}`;
         section.details['Remaining'] = `$${win.remaining_dollars.toFixed(2)}`;
+      }
+      sections.push(section);
+    }
+  }
+
+  // Detect unknown codenames — keys not in KNOWN_METRICS and not structural
+  for (const key of Object.keys(data)) {
+    if (ALL_KNOWN_KEYS.has(key)) continue;
+    const val = data[key];
+    if (val && typeof val === 'object' && val.utilization != null) {
+      const section: UsageSection = {
+        key, label: key, color: '#78716C', unknown: true,
+        percentage: val.utilization, resetDate: val.resets_at,
+      };
+      if (val.used_dollars != null && val.limit_dollars != null) {
+        section.details = {
+          'Used': `$${val.used_dollars.toFixed(2)}`,
+          'Limit': `$${val.limit_dollars.toFixed(2)}`,
+          'Remaining': `$${val.remaining_dollars.toFixed(2)}`,
+        };
       }
       sections.push(section);
     }

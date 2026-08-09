@@ -1,3 +1,5 @@
+import { KNOWN_METRICS, ALL_KNOWN_KEYS } from '@/utils/metrics';
+
 export default defineBackground(() => {
   // browser.action (MV3) vs browser.browserAction (MV2/Firefox)
   const action = browser.action ?? (browser as any).browserAction;
@@ -226,20 +228,9 @@ export default defineBackground(() => {
   }
 
   // Badge cycling configuration
-  const BADGE_SOURCES = [
-    { key: 'five_hour', label: '5h', color: '#D97706' },
-    { key: 'seven_day', label: '7d', color: '#3B82F6' },
-    { key: 'seven_day_sonnet', label: 'So', color: '#8B5CF6' },
-    { key: 'seven_day_opus', label: 'Op', color: '#EC4899' },
-    { key: 'seven_day_omelette', label: 'De', color: '#F472B6' },
-    { key: 'omelette_promotional', label: 'DP', color: '#FB923C' },
-    { key: 'seven_day_oauth_apps', label: 'OA', color: '#06B6D4' },
-    { key: 'seven_day_cowork', label: 'Cw', color: '#10B981' },
-    { key: 'iguana_necktie', label: 'Ot', color: '#78716C' },
-    { key: 'tangelo', label: 'Tg', color: '#A78BFA' },
-    { key: 'routine_runs', label: 'Rn', color: '#EAB308' },
-    { key: 'extra_usage', label: 'Ex', color: '#E11D48' },
-  ];
+  const BADGE_SOURCES = KNOWN_METRICS.map(m => ({
+    key: m.key, label: m.badgeLabel, color: m.color,
+  }));
   const CYCLE_INTERVAL_MS = 4000;
   let currentBadgeIndex = 0;
   let cycleIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -328,6 +319,22 @@ export default defineBackground(() => {
           });
           offset++;
         }
+      }
+    }
+
+    // Detect unknown codenames and add them before extra_usage
+    const extraIdx = sources.findIndex(s => s.key === 'extra_usage');
+    const insertPos = extraIdx !== -1 ? extraIdx : sources.length;
+    let unknownOffset = 0;
+    for (const key of Object.keys(usageData)) {
+      if (ALL_KNOWN_KEYS.has(key)) continue;
+      const val = usageData[key];
+      if (val && typeof val === 'object' && val.utilization != null) {
+        const shortLabel = key.slice(0, 2).toUpperCase();
+        sources.splice(insertPos + unknownOffset, 0, {
+          key, label: shortLabel, color: '#78716C',
+        });
+        unknownOffset++;
       }
     }
 
