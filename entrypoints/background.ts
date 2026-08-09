@@ -57,14 +57,15 @@ export default defineBackground(() => {
     if (message.action === 'setBadgeMode') {
       browser.storage.local.set({ badgeMode: message.mode }).then(() => {
         // Re-render badge with new mode
-        browser.storage.local.get(['usageData', 'badgeVisibility']).then((result) => {
+        browser.storage.local.get(['usageData', 'badgeVisibility', 'showUnknown']).then((result) => {
+          const unknownVisible = (result.showUnknown as boolean) || false;
           if (result.usageData) {
             if (message.mode === 'active') {
               stopBadgeCycle();
-              displayActiveBadge(result.usageData, (result.badgeVisibility as Record<string, boolean>) || {});
+              displayActiveBadge(result.usageData, (result.badgeVisibility as Record<string, boolean>) || {}, unknownVisible);
             } else {
               const visibility = (result.badgeVisibility as Record<string, boolean>) || {};
-              displayNextBadge(result.usageData, visibility);
+              displayNextBadge(result.usageData, visibility, unknownVisible);
               startBadgeCycle();
             }
           }
@@ -239,9 +240,9 @@ export default defineBackground(() => {
     if (cycleIntervalId) return;
 
     cycleIntervalId = setInterval(() => {
-      browser.storage.local.get(['usageData', 'badgeVisibility']).then((result) => {
+      browser.storage.local.get(['usageData', 'badgeVisibility', 'showUnknown']).then((result) => {
         if (result.usageData) {
-          displayNextBadge(result.usageData, (result.badgeVisibility as Record<string, boolean>) || {});
+          displayNextBadge(result.usageData, (result.badgeVisibility as Record<string, boolean>) || {}, (result.showUnknown as boolean) || false);
         }
       });
     }, CYCLE_INTERVAL_MS);
@@ -254,8 +255,8 @@ export default defineBackground(() => {
     }
   }
 
-  function displayActiveBadge(usageData: any, _badgeVisibility: Record<string, boolean>) {
-    const sources = getBadgeSources(usageData);
+  function displayActiveBadge(usageData: any, _badgeVisibility: Record<string, boolean>, showUnknown: boolean) {
+    const sources = getBadgeSources(usageData, showUnknown);
     const limits = usageData.limits;
 
     // Find the active limit source (ignore badge visibility — user chose this mode
@@ -299,7 +300,7 @@ export default defineBackground(() => {
     }
   }
 
-  function getBadgeSources(usageData: any): { key: string; label: string; color: string }[] {
+  function getBadgeSources(usageData: any, showUnknown = false): { key: string; label: string; color: string }[] {
     const sources = [...BADGE_SOURCES];
 
     // Insert model-scoped limits from limits[] array before extra_usage
@@ -323,19 +324,21 @@ export default defineBackground(() => {
       }
     }
 
-    // Detect unknown codenames and add them before extra_usage
-    const extraIdx = sources.findIndex(s => s.key === 'extra_usage');
-    const insertPos = extraIdx !== -1 ? extraIdx : sources.length;
-    let unknownOffset = 0;
-    for (const key of Object.keys(usageData)) {
-      if (ALL_KNOWN_KEYS.has(key)) continue;
-      const val = usageData[key];
-      if (val && typeof val === 'object' && val.utilization != null) {
-        const shortLabel = key.slice(0, 2).toUpperCase();
-        sources.splice(insertPos + unknownOffset, 0, {
-          key, label: shortLabel, color: '#78716C',
-        });
-        unknownOffset++;
+    // Detect unknown codenames and add them before extra_usage (only if lab toggle is on)
+    if (showUnknown) {
+      const extraIdx = sources.findIndex(s => s.key === 'extra_usage');
+      const insertPos = extraIdx !== -1 ? extraIdx : sources.length;
+      let unknownOffset = 0;
+      for (const key of Object.keys(usageData)) {
+        if (ALL_KNOWN_KEYS.has(key)) continue;
+        const val = usageData[key];
+        if (val && typeof val === 'object' && val.utilization != null) {
+          const shortLabel = key.slice(0, 2).toUpperCase();
+          sources.splice(insertPos + unknownOffset, 0, {
+            key, label: shortLabel, color: '#78716C',
+          });
+          unknownOffset++;
+        }
       }
     }
 
@@ -364,8 +367,8 @@ export default defineBackground(() => {
     return null;
   }
 
-  function displayNextBadge(usageData: any, badgeVisibility: Record<string, boolean>) {
-    const sources = getBadgeSources(usageData);
+  function displayNextBadge(usageData: any, badgeVisibility: Record<string, boolean>, showUnknown = false) {
+    const sources = getBadgeSources(usageData, showUnknown);
     if (sources.length === 0) {
       action.setBadgeText({ text: '-' });
       action.setBadgeBackgroundColor({ color: '#888888' });
@@ -408,16 +411,17 @@ export default defineBackground(() => {
       return;
     }
 
-    const { badgeVisibility, badgeMode } = await browser.storage.local.get(['badgeVisibility', 'badgeMode']);
+    const { badgeVisibility, badgeMode, showUnknown } = await browser.storage.local.get(['badgeVisibility', 'badgeMode', 'showUnknown']);
     const visibility = (badgeVisibility as Record<string, boolean>) || {};
+    const unknownVisible = (showUnknown as boolean) || false;
 
     if (badgeMode === 'active') {
       stopBadgeCycle();
-      displayActiveBadge(usageData, visibility);
+      displayActiveBadge(usageData, visibility, unknownVisible);
       return;
     }
 
-    const sources = getBadgeSources(usageData);
+    const sources = getBadgeSources(usageData, unknownVisible);
 
     let found = false;
     for (let i = 0; i < sources.length; i++) {
