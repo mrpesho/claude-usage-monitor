@@ -141,13 +141,26 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
   let html = '';
   const usageInfo = parseUsageData(usageData, prepaidCredits);
 
-  const visibleSections = usageInfo.sections.filter(s => !s.unknown || showUnknown);
-  if (visibleSections.length > 0) {
-    for (const section of visibleSections) {
+  const knownSections = usageInfo.sections.filter(s => !s.unknown);
+  const unknownSections = usageInfo.sections.filter(s => s.unknown);
+
+  if (knownSections.length > 0) {
+    for (const section of knownSections) {
       html += renderUsageSection(section);
     }
   } else {
     html += `<div class="usage-section"><div style="font-size:12px;color:#888;">Data not recognized. See raw data below.</div></div>`;
+  }
+
+  if (showUnknown) {
+    html += `<div class="lab-hint">Below are undocumented API codenames. If any show a non-zero value that matches your <a href="https://claude.ai/settings/usage" target="_blank">usage page</a>, please <a href="https://github.com/mrpesho/claude-usage-monitor/issues" target="_blank">let me know</a> what it corresponds to.</div>`;
+    if (unknownSections.length > 0) {
+      for (const section of unknownSections) {
+        html += renderUsageSection(section);
+      }
+    } else {
+      html += `<div style="font-size:11px;color:#666;text-align:center;margin-bottom:12px;">No unknown metrics in current data.</div>`;
+    }
   }
 
   if (lastUpdated) {
