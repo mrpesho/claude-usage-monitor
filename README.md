@@ -18,28 +18,33 @@ Anthropic has clarified that they cannot officially endorse the use of internal 
 
 ## Features
 
-- Shows usage percentage directly on the extension badge
-- Cycles through all available usage limits with color-coded indicators:
-  - **Orange** — 5-hour limit
-  - **Blue** — 7-day overall
-  - **Purple** — 7-day Sonnet
-  - **Pink** — 7-day Opus
-  - **Pink-light** — 7-day Design (Claude Design)
-  - **Cyan** — 7-day OAuth Apps
-  - **Green** — 7-day Cowork
-  - **Gray** — Other
-  - **Sky** — Routine Runs (daily)
-  - **Rose** — Extra Usage
-- Toggle individual metrics on/off from the badge cycle
-- Detailed popup with progress bars and reset times
-- Collapsible cards — click any card to collapse/expand; layout persists across sessions
-- Extra Usage section showing monthly limit, amount used, and prepaid credit balance
-- Routine Runs showing daily limit and usage count
-- Raw API data viewer with copy-to-clipboard
-- Automatic retry with exponential backoff on rate-limited (429) responses
-- Configurable auto-refresh interval (2–30 min)
-- Works with your existing Claude session (no API key needed)
-- All data stays local — nothing ever leaves your browser
+- **Badge cycling** — Shows usage percentage directly on the extension badge, cycling through all available metrics with color-coded indicators
+- **Badge modes** — "Cycle selected" rotates through visible metrics; "Show Active only" displays the currently active rate limit
+- **Toggle badge metrics** — Click the ↻ icon on any card to show/hide that metric from the badge cycle
+- **Collapsible cards** — Click any card to collapse/expand; layout persists across sessions
+- **Active limit indicator** — The card enforcing your current rate limit is marked with an ACTIVE badge
+- **Severity borders** — Cards show warning (orange) or critical (red) borders when approaching limits
+- **Usage Credits** — Detailed breakdown with monthly limit, amount used, prepaid credit balance, and individual credit/promo tranches with expiry dates
+- **Routine Runs** — Daily limit and usage count
+- **Lab toggle** — Reveals unknown/undocumented API codenames (e.g. `nimbus_quill`, `iguana_necktie`) so users can help identify what they represent
+- **Raw data viewer** — Full API JSON dump with copy-to-clipboard
+- **Auto-refresh** — Configurable interval (2–30 min) with automatic retry and exponential backoff on rate-limited (429) responses
+- **Privacy** — All data stays local; nothing ever leaves your browser
+
+### Badge colors
+
+| Metric | Color | Badge |
+|--------|-------|-------|
+| 5-Hour Limit | Orange | 5h |
+| 7-Day Overall | Blue | 7d |
+| 7-Day Sonnet | Purple | So |
+| 7-Day Opus | Pink | Op |
+| 7-Day Design | Pink-light | De |
+| Design Promo | Orange-light | DP |
+| 7-Day OAuth Apps | Cyan | OA |
+| 7-Day Cowork | Green | Cw |
+| Routine Runs | Yellow | Rn |
+| Usage Credits | Rose | Ex |
 
 ## Installation
 
