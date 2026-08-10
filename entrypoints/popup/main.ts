@@ -46,6 +46,7 @@ browser.storage.onChanged.addListener((changes, area) => {
 
 function showDisclaimer() {
   refreshBtn.style.display = 'none';
+  labToggle.style.display = 'none';
   contentEl.innerHTML = `
     <div class="disclaimer">
       <div class="disclaimer-title">Unofficial Extension</div>
@@ -63,6 +64,7 @@ function showDisclaimer() {
   document.getElementById('acceptDisclaimer')!.addEventListener('click', async () => {
     await browser.storage.local.set({ disclaimerAccepted: true });
     refreshBtn.style.display = '';
+    labToggle.style.display = '';
     loadStoredData();
   });
 }
