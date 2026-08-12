@@ -19,3 +19,7 @@ Thumbs.db
 *.zip
 .output/
 .wxt/
+
+# Promo assets (not part of the extension)
+store/promo/
+generate-store-assets.js
