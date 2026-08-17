@@ -1,7 +1,7 @@
 // Note: innerHTML is used throughout this file. All user-controlled/API data is
 // sanitized via escapeHtml() before insertion. Static HTML strings are hardcoded.
 
-import { KNOWN_METRICS, KNOWN_METRICS_MAP, ALL_KNOWN_KEYS } from '@/utils/metrics';
+import { KNOWN_METRICS, KNOWN_METRICS_MAP, ALL_KNOWN_KEYS, DEFAULT_BADGE_KEYS } from '@/utils/metrics';
 
 const contentEl = document.getElementById('content')!;
 const refreshBtn = document.getElementById('refreshBtn') as HTMLButtonElement;
@@ -13,6 +13,11 @@ let currentRefreshInterval = 5;
 let currentBadgeMode = 'cycle';
 let collapsedCards: Record<string, boolean> = {};
 let badgeVisibility: Record<string, boolean> = {};
+
+function isBadgeVisible(key: string): boolean {
+  if (key in badgeVisibility) return badgeVisibility[key];
+  return DEFAULT_BADGE_KEYS.has(key);
+}
 
 const labToggle = document.getElementById('labToggle')!;
 
@@ -229,16 +234,13 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
       e.stopPropagation();
       const el = toggle as HTMLElement;
       const key = el.dataset.key!;
-      const color = el.dataset.color!;
-      const isCurrentlyVisible = badgeVisibility[key] !== false;
+      const isCurrentlyVisible = isBadgeVisible(key);
       badgeVisibility[key] = !isCurrentlyVisible;
       if (badgeVisibility[key]) {
         el.classList.replace('off', 'on');
-        el.style.color = color;
         el.title = 'Hide from icon badge';
       } else {
         el.classList.replace('on', 'off');
-        el.style.color = '';
         el.title = 'Show in icon badge';
       }
       await browser.storage.local.set({ badgeVisibility });
@@ -509,17 +511,17 @@ function renderUsageSection(section: UsageSection): string {
     valueDisplay = `${percentage.toFixed(1)}%`;
   }
 
-  const isVisible = badgeVisibility[section.key] !== false;
+  const isVisible = isBadgeVisible(section.key);
   const toggleClass = isVisible ? 'on' : 'off';
-  const toggleColor = isVisible ? `color:${section.color || '#888'}` : '';
   const toggleTitle = isVisible ? 'Hide from icon badge' : 'Show in icon badge';
+  const toggleColor = section.color || '#888';
 
   let html = `
     <div class="usage-section ${stateClass}${severityClass}" data-key="${section.key}">
       <div class="usage-header">
         <span class="usage-label">
           ${dot}${escapeHtml(section.label)}${activeIndicator}
-          <span class="badge-toggle ${toggleClass}" data-key="${section.key}" data-color="${section.color || '#888'}" title="${toggleTitle}" style="${toggleColor}">&#x21BB;</span>
+          <span class="badge-toggle ${toggleClass}" data-key="${section.key}" data-color="${toggleColor}" title="${toggleTitle}" style="--toggle-color:${toggleColor}">&#x21BB;</span>
           <span class="toggle-arrow">▾</span>
         </span>
         <span class="usage-value">${valueDisplay}</span>

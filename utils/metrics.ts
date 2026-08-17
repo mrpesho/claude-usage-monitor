@@ -30,6 +30,9 @@ export const STRUCTURAL_KEYS = new Set(['limits', 'spend', 'member_dashboard_ava
 // Quick lookup by key
 export const KNOWN_METRICS_MAP = new Map(KNOWN_METRICS.map(m => [m.key, m]));
 
+// Keys that are visible in badge cycling by default
+export const DEFAULT_BADGE_KEYS = new Set(['five_hour']);
+
 // Set of all known keys (metrics + structural) for unknown detection
 export const ALL_KNOWN_KEYS = new Set([
   ...KNOWN_METRICS.map(m => m.key),

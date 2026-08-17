@@ -1,4 +1,4 @@
-import { KNOWN_METRICS, ALL_KNOWN_KEYS } from '@/utils/metrics';
+import { KNOWN_METRICS, ALL_KNOWN_KEYS, DEFAULT_BADGE_KEYS } from '@/utils/metrics';
 
 export default defineBackground(() => {
   // browser.action (MV3) vs browser.browserAction (MV2/Firefox)
@@ -380,7 +380,8 @@ export default defineBackground(() => {
     do {
       currentBadgeIndex = (currentBadgeIndex + 1) % sources.length;
       const source = sources[currentBadgeIndex];
-      if (badgeVisibility[source.key] === false) continue;
+      const isVisible = source.key in badgeVisibility ? badgeVisibility[source.key] : DEFAULT_BADGE_KEYS.has(source.key);
+      if (!isVisible) continue;
       if (getUtilization(usageData, source.key) != null) {
         displayBadgeForSource(usageData, source);
         return;
