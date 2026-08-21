@@ -225,6 +225,31 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
       card.classList.toggle('expanded', !isNowCollapsed);
       card.classList.toggle('collapsed', isNowCollapsed);
       collapsedCards[key] = isNowCollapsed;
+      // Swap the collapse/expand icon
+      const icon = card.querySelector('.toggle-icon') as HTMLElement;
+      if (icon) {
+        const vertLine = icon.querySelector('line:last-child');
+        if (isNowCollapsed && vertLine) {
+          // Collapsed → show plus (already has horizontal line, keep vertical)
+        } else if (!isNowCollapsed && !vertLine) {
+          // Expanded → should only have horizontal line
+        }
+        // Simpler: toggle the vertical line presence
+        if (isNowCollapsed) {
+          // Now collapsed → show plus icon (add vertical line)
+          const svg = icon.querySelector('svg')!;
+          if (!svg.querySelector('line[y1="8"]')) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', '12'); line.setAttribute('y1', '8');
+            line.setAttribute('x2', '12'); line.setAttribute('y2', '16');
+            svg.appendChild(line);
+          }
+        } else {
+          // Now expanded → show minus icon (remove vertical line)
+          const vLine = icon.querySelector('svg line[y1="8"]');
+          if (vLine) vLine.remove();
+        }
+      }
       await browser.storage.local.set({ collapsedCards });
     });
   });
@@ -480,7 +505,10 @@ function parseUsageData(data: any, prepaidCredits: any): { sections: UsageSectio
 function renderUsageSection(section: UsageSection): string {
   const isCollapsed = collapsedCards[section.key] === true;
   const stateClass = isCollapsed ? 'collapsed' : 'expanded';
-  const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${section.color || '#888'};margin-right:6px;"></span>`;
+  const iconColor = section.color || '#888';
+  const collapseIcon = (collapsed: boolean) => collapsed
+    ? `<span class="toggle-icon" style="--toggle-icon-color:${iconColor}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/></svg></span>`
+    : `<span class="toggle-icon" style="--toggle-icon-color:${iconColor}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>`;
   const activeIndicator = section.isActive ? '<span class="active-badge">ACTIVE</span>' : '';
   const severityClass = section.severity && section.severity !== 'normal' ? ` severity-${section.severity}` : '';
 
@@ -488,7 +516,7 @@ function renderUsageSection(section: UsageSection): string {
     return `
       <div class="usage-section ${stateClass} disabled-section" data-key="${section.key}">
         <div class="usage-header">
-          <span class="usage-label">${dot}${escapeHtml(section.label)}<span class="toggle-arrow">▾</span></span>
+          <span class="usage-label">${collapseIcon(isCollapsed)}${escapeHtml(section.label)}</span>
           <span class="usage-value" style="color:#666;">Disabled</span>
         </div>
         <div class="usage-body"><div class="disabled-hint">Enable usage credits in your Claude account settings</div></div>
@@ -520,9 +548,9 @@ function renderUsageSection(section: UsageSection): string {
     <div class="usage-section ${stateClass}${severityClass}" data-key="${section.key}">
       <div class="usage-header">
         <span class="usage-label">
-          ${dot}${escapeHtml(section.label)}${activeIndicator}
+          ${collapseIcon(isCollapsed)}
           <span class="badge-toggle ${toggleClass}" data-key="${section.key}" data-color="${toggleColor}" title="${toggleTitle}" style="--toggle-color:${toggleColor}"></span>
-          <span class="toggle-arrow">▾</span>
+          ${escapeHtml(section.label)}${activeIndicator}
         </span>
         <span class="usage-value">${valueDisplay}</span>
       </div>
