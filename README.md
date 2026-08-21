@@ -4,7 +4,7 @@
 
 A browser extension that displays your Claude AI usage status in the browser toolbar. Supports Chrome and Firefox.
 
-<img src="preview.gif" width="300" alt="Claude Usage Monitor Preview">
+<img src="store/chrome-claude-usage-monitor-1280x800.png" width="500" alt="Claude Usage Monitor Preview">
 
 ## Important Notice
 
@@ -20,13 +20,15 @@ Anthropic has clarified that they cannot officially endorse the use of internal 
 
 - **Badge cycling** — Shows usage percentage directly on the extension badge, cycling through all available metrics with color-coded indicators
 - **Badge modes** — "Cycle selected" rotates through visible metrics; "Show Active only" displays the currently active rate limit
-- **Toggle badge metrics** — Click the ↻ icon on any card to show/hide that metric from the badge cycle
-- **Collapsible cards** — Click any card to collapse/expand; layout persists across sessions
+- **Toggle badge metrics** — Use the toggle switch on any card to show/hide that metric from the badge cycle
+- **Collapsible cards** — Chevron icons to expand/collapse each card; layout persists across sessions
 - **Active limit indicator** — The card enforcing your current rate limit is marked with an ACTIVE badge
 - **Severity borders** — Cards show warning (orange) or critical (red) borders when approaching limits
-- **Usage Credits** — Detailed breakdown with monthly limit, amount used, prepaid credit balance, and individual credit/promo tranches with expiry dates
-- **Routine Runs** — Daily limit and usage count
-- **Lab toggle** — Reveals unknown/undocumented API codenames (e.g. `nimbus_quill`, `iguana_necktie`) so users can help identify what they represent
+- **Model-scoped limits** — Automatically detects and displays per-model session and weekly rate limits
+- **Usage Credits** — Detailed breakdown with limit, amount used, spend cap, prepaid credit balance, and individual credit/promo tranches with expiry dates
+- **Multi-currency support** — Displays amounts in your account's currency (USD, EUR, GBP, and more)
+- **Routine Runs** — Daily routine run limit and usage count
+- **Lab toggle** — Reveals unknown/undocumented API codenames so users can help identify what they represent
 - **Raw data viewer** — Full API JSON dump with copy-to-clipboard
 - **Auto-refresh** — Configurable interval (2–30 min) with automatic retry and exponential backoff on rate-limited (429) responses
 - **Privacy** — All data stays local; nothing ever leaves your browser
@@ -44,7 +46,7 @@ Anthropic has clarified that they cannot officially endorse the use of internal 
 | 7-Day OAuth Apps | Cyan | OA |
 | 7-Day Cowork | Green | Cw |
 | Routine Runs | Yellow | Rn |
-| Usage Credits | Rose | Ex |
+| Usage Credits | Crimson | Ex |
 
 ## Installation
 
