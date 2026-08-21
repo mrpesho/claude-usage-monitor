@@ -521,7 +521,7 @@ function renderUsageSection(section: UsageSection): string {
       <div class="usage-header">
         <span class="usage-label">
           ${dot}${escapeHtml(section.label)}${activeIndicator}
-          <span class="badge-toggle ${toggleClass}" data-key="${section.key}" data-color="${toggleColor}" title="${toggleTitle}" style="--toggle-color:${toggleColor}">&#x21BB;</span>
+          <span class="badge-toggle ${toggleClass}" data-key="${section.key}" data-color="${toggleColor}" title="${toggleTitle}" style="--toggle-color:${toggleColor}"></span>
           <span class="toggle-arrow">▾</span>
         </span>
         <span class="usage-value">${valueDisplay}</span>
