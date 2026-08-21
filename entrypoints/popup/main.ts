@@ -225,29 +225,13 @@ function renderUsage(usageData: any, lastUpdated: number, prepaidCredits: any, r
       card.classList.toggle('expanded', !isNowCollapsed);
       card.classList.toggle('collapsed', isNowCollapsed);
       collapsedCards[key] = isNowCollapsed;
-      // Swap the collapse/expand icon
+      // Swap the chevron direction and tooltip
       const icon = card.querySelector('.toggle-icon') as HTMLElement;
       if (icon) {
-        const vertLine = icon.querySelector('line:last-child');
-        if (isNowCollapsed && vertLine) {
-          // Collapsed → show plus (already has horizontal line, keep vertical)
-        } else if (!isNowCollapsed && !vertLine) {
-          // Expanded → should only have horizontal line
-        }
-        // Simpler: toggle the vertical line presence
-        if (isNowCollapsed) {
-          // Now collapsed → show plus icon (add vertical line)
-          const svg = icon.querySelector('svg')!;
-          if (!svg.querySelector('line[y1="8"]')) {
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', '12'); line.setAttribute('y1', '8');
-            line.setAttribute('x2', '12'); line.setAttribute('y2', '16');
-            svg.appendChild(line);
-          }
-        } else {
-          // Now expanded → show minus icon (remove vertical line)
-          const vLine = icon.querySelector('svg line[y1="8"]');
-          if (vLine) vLine.remove();
+        icon.title = isNowCollapsed ? 'Expand' : 'Collapse';
+        const polyline = icon.querySelector('polyline');
+        if (polyline) {
+          polyline.setAttribute('points', isNowCollapsed ? '9 18 15 12 9 6' : '6 9 12 15 18 9');
         }
       }
       await browser.storage.local.set({ collapsedCards });
@@ -507,8 +491,8 @@ function renderUsageSection(section: UsageSection): string {
   const stateClass = isCollapsed ? 'collapsed' : 'expanded';
   const iconColor = section.color || '#888';
   const collapseIcon = (collapsed: boolean) => collapsed
-    ? `<span class="toggle-icon" style="--toggle-icon-color:${iconColor}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/></svg></span>`
-    : `<span class="toggle-icon" style="--toggle-icon-color:${iconColor}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>`;
+    ? `<span class="toggle-icon" title="Expand" style="--toggle-icon-color:${iconColor}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>`
+    : `<span class="toggle-icon" title="Collapse" style="--toggle-icon-color:${iconColor}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>`;
   const activeIndicator = section.isActive ? '<span class="active-badge">ACTIVE</span>' : '';
   const severityClass = section.severity && section.severity !== 'normal' ? ` severity-${section.severity}` : '';
 
